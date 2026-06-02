@@ -1,0 +1,202 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ScvReady Blog</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header>
+    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center;">
+      <a href="/" style="position:absolute; left:0; text-decoration:none; padding:8px 12px;">Home</a>
+      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">ScvReady Blog</a></h1>
+    </div>
+  </header>
+  <main class="container">
+    
+<article class="post">
+  <h2>TypeScriptToLua 自定义插件实现全览</h2>
+  <p class="post-meta">2026-05-28</p>
+  <div class="post-body"><p>本文系统梳理一套基于 TypeScriptToLua (TSTL) 的自定义插件的完整实现，涵盖从增量编译到 AST 转换、代码生成的全流程。</p>
+<h2 id="_1">整体架构</h2>
+<p>这套插件的核心目标：</p>
+<ul>
+<li>将 TypeScript 编译为接近手写 Lua 5.3/5.4 的代码</li>
+<li>移除模块系统（不生成 require/exports），类作为全局模块</li>
+<li>简化类模型（用 <code>____M</code> 变量代替复杂 <code>__TS__Class()</code> 包装）</li>
+<li>内联特殊方法（luaMInit / luaMFinal / init 静态方法直接展开）</li>
+<li>支持增量编译 + 内嵌原生 Lua 代码</li>
+</ul>
+<p>插件执行顺序：<code>beforeTransform</code> → <code>visitors</code> → <code>beforeEmit</code> → <code>afterPrint</code> → <code>printer</code> → <code>afterEmit</code></p>
+<h2 id="beforetransformts">beforeTransform.ts — 增量编译</h2>
+<p>实现增量编译 + 自动复制非 TS 资源文件到输出目录。</p>
+<p>通过 <code>file-timestamps.txt</code> 记录每个源文件的 ctime+mtime 组合，判断文件是否有变化。未变化的文件从 <code>program.getSourceFiles()</code> 中移除，TSTL 直接跳过。同时递归复制非 <code>.ts</code> 资源文件到输出目录，同样带时间戳校验。</p>
+<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kd">class</span><span class="w"> </span><span class="nx">Plugin</span><span class="w"> </span><span class="k">implements</span><span class="w"> </span><span class="nx">tstl</span><span class="p">.</span><span class="nx">Plugin</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">private</span><span class="w"> </span><span class="nx">unchangedFiles</span><span class="o">:</span><span class="w"> </span><span class="kt">ts.SourceFile</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[];</span>
+<span class="w">    </span><span class="k">private</span><span class="w"> </span><span class="nx">timestamps</span><span class="o">:</span><span class="w"> </span><span class="kt">Record</span><span class="o">&lt;</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="kt">string</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{};</span>
+<span class="w">    </span><span class="k">private</span><span class="w"> </span><span class="nx">timestampFile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">path</span><span class="p">.</span><span class="nx">resolve</span><span class="p">(</span><span class="s2">&quot;./&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;file-timestamps.txt&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>关键逻辑：</p>
+<ol>
+<li>加载历史时间戳</li>
+<li>检查每个源文件的 <code>ctime+mtime</code> 组合字符串，判断是否有变化</li>
+<li>未变化的文件从 <code>program.getSourceFiles()</code> 中 splice 移除</li>
+<li>递归复制非 <code>.ts</code> 资源文件到输出目录</li>
+<li>将更新后的时间戳写回文件</li>
+</ol>
+<h2 id="visitorsts-ast">visitors.ts — 核心 AST 转换（最重要）</h2>
+<p>注册了多个自定义 Visitor，重写默认的 TS→Lua 转换逻辑。</p>
+<h3 id="_2">注册入口</h3>
+<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kd">const</span><span class="w"> </span><span class="nx">plugin</span><span class="o">:</span><span class="w"> </span><span class="kt">tstl.Plugin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">visitors</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="p">[</span><span class="nx">ts</span><span class="p">.</span><span class="nx">SyntaxKind</span><span class="p">.</span><span class="nx">ImportDeclaration</span><span class="p">]</span><span class="o">:</span><span class="w">  </span><span class="p">(</span><span class="nx">node</span><span class="p">,</span><span class="w"> </span><span class="nx">context</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="kc">undefined</span><span class="p">,</span><span class="w">     </span><span class="c1">// 移除 import</span>
+<span class="w">        </span><span class="p">[</span><span class="nx">ts</span><span class="p">.</span><span class="nx">SyntaxKind</span><span class="p">.</span><span class="nx">ExportDeclaration</span><span class="p">]</span><span class="o">:</span><span class="w">  </span><span class="p">(</span><span class="nx">node</span><span class="p">,</span><span class="w"> </span><span class="nx">context</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="kc">undefined</span><span class="p">,</span><span class="w">     </span><span class="c1">// 移除 export</span>
+<span class="w">        </span><span class="p">[</span><span class="nx">ts</span><span class="p">.</span><span class="nx">SyntaxKind</span><span class="p">.</span><span class="nx">ClassDeclaration</span><span class="p">]</span><span class="o">:</span><span class="w">   </span><span class="nx">visitClassDeclaration2</span><span class="p">,</span><span class="w">            </span><span class="c1">// 核心：类重写</span>
+<span class="w">        </span><span class="p">[</span><span class="nx">ts</span><span class="p">.</span><span class="nx">SyntaxKind</span><span class="p">.</span><span class="nx">ThisKeyword</span><span class="p">]</span><span class="o">:</span><span class="w">        </span><span class="nx">visitThis</span><span class="p">,</span><span class="w">                         </span><span class="c1">// this 指针处理</span>
+<span class="w">        </span><span class="p">[</span><span class="nx">ts</span><span class="p">.</span><span class="nx">SyntaxKind</span><span class="p">.</span><span class="nx">SourceFile</span><span class="p">]</span><span class="o">:</span><span class="w">         </span><span class="nx">sourceFile</span><span class="p">,</span><span class="w">                        </span><span class="c1">// 重置计数器</span>
+<span class="w">        </span><span class="p">[</span><span class="nx">ts</span><span class="p">.</span><span class="nx">SyntaxKind</span><span class="p">.</span><span class="nx">CallExpression</span><span class="p">]</span><span class="o">:</span><span class="w">     </span><span class="nx">callExpression</span><span class="p">,</span><span class="w">                    </span><span class="c1">// 方法调用</span>
+<span class="w">        </span><span class="p">[</span><span class="nx">ts</span><span class="p">.</span><span class="nx">SyntaxKind</span><span class="p">.</span><span class="nx">PropertyAccessExpression</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="nx">propertyAccessExpression</span><span class="p">,</span><span class="w">    </span><span class="c1">// 属性访问</span>
+<span class="w">        </span><span class="p">[</span><span class="nx">ts</span><span class="p">.</span><span class="nx">SyntaxKind</span><span class="p">.</span><span class="nx">Identifier</span><span class="p">]</span><span class="o">:</span><span class="w">         </span><span class="nx">identifier</span><span class="p">,</span><span class="w">                        </span><span class="c1">// 特殊标识符</span>
+<span class="w">        </span><span class="p">[</span><span class="nx">ts</span><span class="p">.</span><span class="nx">SyntaxKind</span><span class="p">.</span><span class="nx">FunctionDeclaration</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="nx">functionDeclaration</span><span class="p">,</span><span class="w">              </span><span class="c1">// 函数特殊处理</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<h3 id="visitclassdeclaration2">类声明核心转换（visitClassDeclaration2）</h3>
+<p>用 <code>____M</code>（或其变体）代替 <code>__TS__Class()</code>，简化类模型，处理 init / private / static。</p>
+<p>核心产出（Lua）：</p>
+<div class="codehilite"><pre><span></span><code class="language-lua"><span class="kd">local</span><span class="w"> </span><span class="nv">____M</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">__TS__Class</span><span class="p">()</span><span class="w">          </span><span class="c1">-- 基础类壳</span>
+<span class="nv">MyClass</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">____M</span><span class="w">                      </span><span class="c1">-- 全局注入</span>
+<span class="kd">local</span><span class="w"> </span><span class="nv">____M</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">MyClass</span><span class="w">                </span><span class="c1">-- 模块变量声明</span>
+<span class="c1">-- ...成员绑定...</span>
+</code></pre></div>
+
+<p>关键概念：</p>
+<p>| 概念 | 说明 |
+|------|------|
+| <code>____M</code> | 类模块变量，代替默认 <code>__TS__Class()</code> 的类引用 |
+| <code>____M_tempN</code> | 嵌套类时的模块变量，N 为嵌套层级 |
+| <code>____ThisBind_temp</code> | 静态方法中访问 private 成员时的 this 代理变量 |
+| <code>____LocalFuncBind_temp</code> | private 方法绑定的表对象 |
+| <code>self</code> | 实例方法中的 this，对应 Lua 的 self |</p>
+<h3 id="this-visitthis">this 关键字处理（visitThis）</h3>
+<p>转换规则：</p>
+<ul>
+<li>实例方法中 <code>this</code> → <code>self</code></li>
+<li>静态方法中 <code>this</code> → <code>____M</code>（或嵌套时的 <code>____M_tempN</code>）</li>
+<li>静态方法中访问 private 成员 → <code>____ThisBind_temp</code></li>
+</ul>
+<h3 id="callexpression">方法调用处理（callExpression）</h3>
+<p>核心区分逻辑：</p>
+<ol>
+<li><code>super.xxx()</code> → 原型方法调用（<code>super.____constructor(...)</code> 等）</li>
+<li><code>private static</code> 方法 → 直接调用函数名：<code>methodName(args)</code></li>
+<li><code>public static</code> 方法 → 带模块名调用</li>
+<li>普通实例方法 → 走默认转换</li>
+</ol>
+<h3 id="propertyaccessexpression">属性访问处理（propertyAccessExpression）</h3>
+<ul>
+<li><code>private static</code> 属性/方法访问 → 直接用属性名（不加模块前缀）</li>
+<li>其他情况走默认转换</li>
+</ul>
+<h3 id="identifier">特殊标识符（identifier）</h3>
+<p>核心：<code>__FUNC__</code> 魔术常量</p>
+<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">node</span><span class="p">.</span><span class="nx">text</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">&quot;__FUNC__&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 自动替换为当前函数名（&quot;类名.方法名&quot; 格式）</span>
+<span class="w">    </span><span class="nx">functionName</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sb">`</span><span class="si">${</span><span class="nx">className</span><span class="si">}</span><span class="sb">.</span><span class="si">${</span><span class="nx">methodName</span><span class="si">}</span><span class="sb">`</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="functiondeclaration">函数声明处理（functionDeclaration）</h3>
+<p>对名为 <code>luaMInit</code> 的顶级函数，直接展开为语句块（不生成函数定义）。其余函数走默认转换。</p>
+<h2 id="beforeemitts">beforeEmit.ts — 生成前深度处理</h2>
+<p>在 Lua 文件写入磁盘前做最后的字符串和 AST 处理。</p>
+<h3 id="_3">特殊函数替换</h3>
+<p>| TS 宏 | 替换结果 |
+|-------|---------|
+| <code>TSRequire(x)</code> | <code>require('x')</code> |
+| <code>StrRequire(x)</code> | <code>require(x)</code> |
+| <code>LuaCode("...")</code> | 直接嵌入原始 Lua 字符串 |
+| <code>LuaMultiReturnFunc(...)</code> | 展开内部内容 |
+| <code>Local(xyz)</code> | <code>local xyz = xyz</code> |</p>
+<h3 id="ast">AST 裁剪</h3>
+<p>用 <code>luaparse</code> 解析 Lua AST，定位 <code>luaMInitFunc = function(...)</code> 赋值语句，只保留函数体内部内容，剥离外层变量赋值包裹。</p>
+<h3 id="return">类模块追加 return</h3>
+<p>通过匹配 <code>Xxx.name = "..."</code> 提取类名，文件末尾追加 <code>return ____M</code>。</p>
+<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kd">let</span><span class="w"> </span><span class="nx">match</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">emitFile</span><span class="p">.</span><span class="nx">code</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="sr">/(\w+)\.name\s*=\s*&quot;/</span><span class="p">);</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">match</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">emitFile</span><span class="p">.</span><span class="nx">code</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">emitFile</span><span class="p">.</span><span class="nx">code</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;\nreturn ____M\n&#39;</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="afterprintts">afterPrint.ts — 打印后文本处理</h2>
+<p>对已格式化的 Lua 代码做字符串层面的后处理。</p>
+<ul>
+<li>移除 <code>____exports</code> 相关行</li>
+<li>移除 <code>____ThisBind_temp.</code> 前缀</li>
+<li>移除 <code>____LocalFuncBind_temp.</code> 前缀</li>
+</ul>
+<h2 id="printerts-lua">printer.ts — 自定义 Lua 打印机</h2>
+<p>继承 <code>LuaPrinter</code>，重写 <code>printFile</code> 在文件头添加注释。</p>
+<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kd">class</span><span class="w"> </span><span class="nx">CustomPrinter</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nx">tstl</span><span class="p">.</span><span class="nx">LuaPrinter</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">protected</span><span class="w"> </span><span class="nx">printFile</span><span class="p">(</span><span class="nx">file</span><span class="o">:</span><span class="w"> </span><span class="kt">tstl.File</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nx">SourceNode</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kd">const</span><span class="w"> </span><span class="nx">originalResult</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">super</span><span class="p">.</span><span class="nx">printFile</span><span class="p">(</span><span class="nx">file</span><span class="p">);</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">createSourceNode</span><span class="p">(</span><span class="nx">file</span><span class="p">,</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="sb">`</span><span class="si">${</span><span class="nx">CUSTOM_COMMENT_HEADER</span><span class="si">}</span><span class="sb"> </span><span class="si">${</span><span class="k">this</span><span class="p">.</span><span class="nx">luaFile</span><span class="si">}</span><span class="sb">\n`</span><span class="p">,</span>
+<span class="w">            </span><span class="nx">originalResult</span>
+<span class="w">        </span><span class="p">]);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="afteremitts">afterEmit.ts — 生成后回调</h2>
+<p>在 Lua 代码生成完成后触发，记录输出文件信息，打印 TS 原始文件路径和输出文件路径。</p>
+<h2 id="moduleresolutionts">模块解析（moduleResolution.ts）</h2>
+<p>简单的模块重定向示例，将特定模块名映射到不同文件。</p>
+<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kr">module</span><span class="nx">Resolution</span><span class="p">(</span><span class="kr">module</span><span class="nx">Identifier</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="kr">module</span><span class="nx">Identifier</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">&quot;foo&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="s2">&quot;bar&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="_4">编译流水线总结</h2>
+<div class="codehilite"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                        </span><span class="n">TSTL</span><span class="w"> </span><span class="err">编译流水线</span><span class="w">                           </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Phase</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span><span class="w"> </span><span class="err">元数据准备</span><span class="w">                                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">→</span><span class="w"> </span><span class="n">beforeTransform</span><span class="o">.</span><span class="n">ts</span><span class="p">:</span><span class="w"> </span><span class="err">增量编译，剔除未修改文件，复制资源文件</span><span class="w">       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Phase</span><span class="w"> </span><span class="mi">2</span><span class="p">:</span><span class="w"> </span><span class="n">AST</span><span class="w"> </span><span class="err">转换（</span><span class="n">Visitors</span><span class="err">）</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">→</span><span class="w"> </span><span class="n">visitors</span><span class="o">.</span><span class="n">ts</span><span class="w"> </span><span class="err">介入，重写</span><span class="w"> </span><span class="n">Class</span><span class="o">/</span><span class="n">This</span><span class="o">/</span><span class="n">Call</span><span class="o">/</span><span class="n">Identifier</span><span class="w"> </span><span class="err">等</span><span class="w">         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">       </span><span class="err">核心产出：简化的</span><span class="w"> </span><span class="n">Lua</span><span class="w"> </span><span class="n">AST</span><span class="err">（使用</span><span class="w"> </span><span class="n">____M</span><span class="p">,</span><span class="w"> </span><span class="bp">self</span><span class="p">,</span><span class="w"> </span><span class="n">local</span><span class="w"> </span><span class="err">等）</span><span class="w">        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Phase</span><span class="w"> </span><span class="mi">3</span><span class="p">:</span><span class="w"> </span><span class="n">Lua</span><span class="w"> </span><span class="err">代码打印</span><span class="w">                                            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">→</span><span class="w"> </span><span class="n">printer</span><span class="o">.</span><span class="n">ts</span><span class="p">:</span><span class="w"> </span><span class="err">可选自定义打印（注释头）</span><span class="w">                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">→</span><span class="w"> </span><span class="err">默认</span><span class="w"> </span><span class="n">TSTL</span><span class="w"> </span><span class="n">LuaPrinter</span><span class="w"> </span><span class="err">输出</span><span class="w"> </span><span class="n">Lua</span><span class="w"> </span><span class="err">字符串</span><span class="w">                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Phase</span><span class="w"> </span><span class="mi">4</span><span class="p">:</span><span class="w"> </span><span class="err">打印后处理</span><span class="w">                                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">→</span><span class="w"> </span><span class="n">afterPrint</span><span class="o">.</span><span class="n">ts</span><span class="p">:</span><span class="w"> </span><span class="err">字符串替换，清理</span><span class="w"> </span><span class="n">____exports</span><span class="o">/</span><span class="n">____ThisBind_temp</span><span class="w">  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Phase</span><span class="w"> </span><span class="mi">5</span><span class="p">:</span><span class="w"> </span><span class="err">生成前处理</span><span class="w">                                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">→</span><span class="w"> </span><span class="n">beforeEmit</span><span class="o">.</span><span class="n">ts</span><span class="p">:</span><span class="w"> </span><span class="n">TSRequire</span><span class="err">→</span><span class="n">require</span><span class="p">,</span><span class="w"> </span><span class="n">LuaCode嵌入</span><span class="p">,</span><span class="w"> </span><span class="n">AST裁剪</span><span class="p">,</span><span class="w">       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">       </span><span class="n">Local宏展开</span><span class="p">,</span><span class="w"> </span><span class="err">格式化</span><span class="p">,</span><span class="w"> </span><span class="err">追加</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">____M</span><span class="w">                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Phase</span><span class="w"> </span><span class="mi">6</span><span class="p">:</span><span class="w"> </span><span class="err">文件写入磁盘</span><span class="w">                                            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Phase</span><span class="w"> </span><span class="mi">7</span><span class="p">:</span><span class="w"> </span><span class="err">生成后回调</span><span class="w">                                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">→</span><span class="w"> </span><span class="n">afterEmit</span><span class="o">.</span><span class="n">ts</span><span class="p">:</span><span class="w"> </span><span class="err">记录日志，打印原始文件和输出文件路径</span><span class="w">              </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div></div>
+  <p><a href="/">← Back to home</a></p>
+</article>
+
+  </main>
+  <footer class="container">
+    <p style="text-align:center;">Copyright © 2015-2026 ScvReady Blog Powered by issues-blog.</p>
+  </footer>
+</body>
+</html>
