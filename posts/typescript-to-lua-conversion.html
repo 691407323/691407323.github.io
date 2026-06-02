@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ScvReady Blog</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header>
+    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center;">
+      <a href="/" style="position:absolute; left:0; text-decoration:none; padding:8px 12px;">Home</a>
+      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">ScvReady Blog</a></h1>
+    </div>
+  </header>
+  <main class="container">
+    
+<article class="post">
+  <h2>TypeScript 转 Lua 转换规则备忘</h2>
+  <p class="post-meta">2026-05-28</p>
+  <div class="post-body"><p>TypeScriptToLua（简称 TSTL）是一个将 TypeScript 代码转译为 Lua 代码的工具。实际使用过程中会遇到很多需要手动处理或记住的规则，本文记录转换过程中的关键注意事项。</p>
+<h2 id="vs">类方法 vs 对象方法</h2>
+<p>Lua 中使用 <code>:</code> 调用时，会自动传入 <code>self</code> 作为第一个参数；使用 <code>.</code> 调用时则需要显式传参。</p>
+<p>TS 中的约定与 Lua 的对应关系：</p>
+<p>| TS 类型 | Lua 调用方式 |
+|---------|--------------|
+| 类方法（<code>static</code>） | <code>模块.xxx()</code> |
+| 对象方法（非 <code>static</code>） | <code>self:xxx()</code> |</p>
+<p>注意 TS 中 <code>any</code> 类型转换后也会变成 <code>::</code> 调用，因此需要对 Lua 模块文件名定义一些通用类型，例如直接定义类型、<code>typeof</code> 继承类型、<code>as unknown as xxx</code> 等方式。</p>
+<h2 id="private-public-static">private / public / static</h2>
+<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="c1">// TS 写法</span>
+<span class="kd">class</span><span class="w"> </span><span class="nx">Foo</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">private</span><span class="w"> </span><span class="k">static</span><span class="w"> </span><span class="nx">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;1.0&quot;</span><span class="w">   </span><span class="c1">// → Lua: local 变量</span>
+<span class="w">    </span><span class="k">public</span><span class="w"> </span><span class="k">static</span><span class="w"> </span><span class="nx">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;foo&quot;</span><span class="w">        </span><span class="c1">// → Lua: 模块级全局变量</span>
+<span class="w">    </span><span class="k">public</span><span class="w"> </span><span class="nx">bar</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="w">                </span><span class="c1">// → Lua: 对象属性</span>
+
+<span class="w">    </span><span class="k">public</span><span class="w"> </span><span class="k">static</span><span class="w"> </span><span class="nx">init</span><span class="p">()</span><span class="w">              </span><span class="c1">// → Lua: 模块.xxx()</span>
+<span class="w">    </span><span class="k">public</span><span class="w"> </span><span class="nx">update</span><span class="p">()</span><span class="w">                   </span><span class="c1">// → Lua: self:xxx()</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>对应关系：</p>
+<p>| TS 修饰符 | Lua 中的表现 |
+|-----------|-------------|
+| <code>private</code> | Lua 模块中的 <code>local</code> |
+| <code>public</code> | Lua 模块的全局 |
+| <code>static</code> | 类方法，调用时用 <code>.</code> |
+| 非 <code>static</code> | 对象方法，调用时用 <code>:</code> |</p>
+<h2 id="this">this 参数问题</h2>
+<p>需要在 TS 文件、类、方法上添加 <code>@noSelfInFile</code>、<code>@noSelf</code> 注释，或使用 <code>this: void</code> 来控制 Lua 中是否保留 <code>self</code> 参数。</p>
+<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="cm">/** @noSelfInFile */</span><span class="w">   </span><span class="c1">// 文件级别：文件内的类不会被处理 self</span>
+<span class="cm">/** @noSelf **/</span><span class="w">        </span><span class="c1">// 类或方法级别：不传递 self</span>
+<span class="c1">// 或在方法签名中使用</span>
+<span class="nx">method</span><span class="p">(</span><span class="nx">this</span><span class="o">:</span><span class="w"> </span><span class="kt">void</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+
+<h2 id="_1">初始化与清理</h2>
+<p>TS 中可提供两个特殊函数，对应 Lua 生命周期：</p>
+<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kd">function</span><span class="w"> </span><span class="nx">luaMInit</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">}</span>
+<span class="kd">function</span><span class="w"> </span><span class="nx">luaMFinal</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+
+<h2 id="_2">数组索引问题</h2>
+<p>TS 中的数组 <code>[]</code> 在转换到 Lua 时索引会自动 <strong>+1</strong>（Lua 索引从 1 开始）。如果不想自动 +1，改用 <code>{}</code> 代替 <code>[]</code>。</p>
+<blockquote>
+<p>控制这个行为的源码开关是 <code>transformElementAccessArgument</code>，如需修改可定位到 TSTL 源码。</p>
+</blockquote>
+<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="c1">// TS 写法</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">arr</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="mf">1</span><span class="p">,</span><span class="w"> </span><span class="mf">2</span><span class="p">,</span><span class="w"> </span><span class="mf">3</span><span class="p">]</span><span class="w">   </span><span class="c1">// → Lua: {2, 3, 4}（索引 +1）</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">tbl</span><span class="o">:</span><span class="w"> </span><span class="kt">LuaHashTable</span><span class="o">&lt;</span><span class="kt">number</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">[</span><span class="mf">0</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="mf">1</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="mf">1</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="mf">2</span><span class="w"> </span><span class="p">}</span><span class="w">  </span><span class="c1">// → Lua: {[0]=1, [1]=2}（不 +1）</span>
+</code></pre></div>
+
+<h2 id="_3">多参数返回</h2>
+<p>使用 <code>$multi</code> 注解函数可返回多个值。使用 <code>...</code> 展开多参数时，部分场景需要配合 <code>any</code> 返回类型和去掉 <code>createUnpackCall</code> 来正确处理。</p>
+<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kd">function</span><span class="w"> </span><span class="nx">getPos</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="nx">$multi</span><span class="o">&lt;</span><span class="p">{</span><span class="w"> </span><span class="nx">x</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="w"> </span><span class="p">}</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">}</span>
+
+<span class="c1">// 调用方式</span>
+<span class="kd">let</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">x</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">getPos</span><span class="p">()</span><span class="w">     </span><span class="c1">// 解构赋值</span>
+<span class="kd">let</span><span class="w"> </span><span class="p">[</span><span class="nx">x</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">getPos</span><span class="p">()</span><span class="w">       </span><span class="c1">// 数组解构</span>
+<span class="kd">let</span><span class="w"> </span><span class="nx">pos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">getPos</span><span class="p">()</span><span class="w">          </span><span class="c1">// 整体接收</span>
+</code></pre></div>
+
+<h2 id="tstl">TSTL 源码改动记录</h2>
+<p>为解决上述问题，直接修改了 TSTL 源码。主要涉及四个文件：</p>
+<h3 id="function-contextts">function-context.ts</h3>
+<p><code>hasNoSelfAncestor</code> 默认返回 <code>true</code>。</p>
+<h3 id="lua-astts">lua-ast.ts</h3>
+<ul>
+<li>注释了 <code>LuaLibFeature</code> 导入</li>
+<li><code>createUnpackCall</code> 改为直接 <code>return expression</code></li>
+<li>新增 <code>wrapInTable</code> 逻辑</li>
+</ul>
+<h3 id="accessts">access.ts</h3>
+<p>数组索引偏移从 <code>+1</code> 改为 <code>+0</code>，使 TS 数组索引与 Lua 保持一致。</p>
+<h3 id="callts">call.ts</h3>
+<ul>
+<li>新增 <code>static</code> 方法判断逻辑</li>
+<li><code>wrapResultInTable</code> 强制为 <code>false</code></li>
+</ul>
+<h3 id="functionts">function.ts</h3>
+<p><code>static</code> 方法不绑定 <code>self</code> 参数。</p>
+<h2 id="_4">小结</h2>
+<p>本文记录 TypeScriptToLua 转换中最常遇到的核心规则，包括方法调用方式、类型可见性、this 处理、数组索引偏移、多返回值等，以及对应的源码修改。掌握这些规则能大幅减少转译后的调试成本。</p></div>
+  <p><a href="/">← Back to home</a></p>
+</article>
+
+  </main>
+  <footer class="container">
+    <p style="text-align:center;">Copyright © 2015-2026 ScvReady Blog Powered by issues-blog.</p>
+  </footer>
+</body>
+</html>
