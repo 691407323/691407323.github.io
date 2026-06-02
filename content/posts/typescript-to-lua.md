@@ -1,6 +1,6 @@
 ---
 title: TypeScript 转 Lua 转换规则备忘
-date: 2026-05-28
+date: 2025-07-16
 slug: typescript-to-lua-conversion
 ---
 
