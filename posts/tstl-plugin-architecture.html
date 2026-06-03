@@ -1,20 +1,57 @@
 <!doctype html>
-<html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>ScvReady Blog</title>
+  <title>胤源 Blog</title>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
   <header>
-    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center;">
-      <a href="/" style="position:absolute; left:0; text-decoration:none; padding:8px 12px;">Home</a>
-      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">ScvReady Blog</a></h1>
+    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center; padding-left: 60px; padding-right: 60px;">
+      <div style="position:absolute; left:0; display:flex; gap:8px; align-items:center;">
+        <a href="/" style="text-decoration:none; padding:8px 12px;">首页</a>
+        <a href="/about.html" style="text-decoration:none; padding:8px 12px; color:#666;">关于</a>
+      </div>
+      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">胤源 Blog</a></h1>
     </div>
   </header>
-  <main class="container">
-    
+  
+
+<div class="toc-layout">
+  <nav class="toc-sidebar">
+    <div class="toc-title">目录</div>
+    <div class="toc">
+<ul>
+<li><a href="#_1">整体架构</a></li>
+<li><a href="#beforetransformts">beforeTransform.ts — 增量编译</a></li>
+<li><a href="#visitorsts-ast">visitors.ts — 核心 AST 转换（最重要）</a><ul>
+<li><a href="#_2">注册入口</a></li>
+<li><a href="#visitclassdeclaration2">类声明核心转换（visitClassDeclaration2）</a></li>
+<li><a href="#this-visitthis">this 关键字处理（visitThis）</a></li>
+<li><a href="#callexpression">方法调用处理（callExpression）</a></li>
+<li><a href="#propertyaccessexpression">属性访问处理（propertyAccessExpression）</a></li>
+<li><a href="#identifier">特殊标识符（identifier）</a></li>
+<li><a href="#functiondeclaration">函数声明处理（functionDeclaration）</a></li>
+</ul>
+</li>
+<li><a href="#beforeemitts">beforeEmit.ts — 生成前深度处理</a><ul>
+<li><a href="#_3">特殊函数替换</a></li>
+<li><a href="#ast">AST 裁剪</a></li>
+<li><a href="#return">类模块追加 return</a></li>
+</ul>
+</li>
+<li><a href="#afterprintts">afterPrint.ts — 打印后文本处理</a></li>
+<li><a href="#printerts-lua">printer.ts — 自定义 Lua 打印机</a></li>
+<li><a href="#afteremitts">afterEmit.ts — 生成后回调</a></li>
+<li><a href="#moduleresolutionts">模块解析（moduleResolution.ts）</a></li>
+<li><a href="#_4">编译流水线总结</a></li>
+</ul>
+</div>
+
+  </nav>
+  <main class="toc-main">
+
 <article class="post">
   <h2>TypeScriptToLua 自定义插件实现全览</h2>
   <p class="post-meta">2025-03-16</p>
@@ -50,7 +87,7 @@
 <h2 id="visitorsts-ast">visitors.ts — 核心 AST 转换（最重要）</h2>
 <p>注册了多个自定义 Visitor，重写默认的 TS→Lua 转换逻辑。</p>
 <h3 id="_2">注册入口</h3>
-<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kd">const</span><span class="w"> </span><span class="nx">plugin</span><span class="o">:</span><span class="w"> </span><span class="kt">tstl.Plugin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<div class="codehilite"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">plugin</span><span class="o">:</span><span class="w"> </span><span class="kt">tstl.Plugin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nx">visitors</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="p">[</span><span class="nx">ts</span><span class="p">.</span><span class="nx">SyntaxKind</span><span class="p">.</span><span class="nx">ImportDeclaration</span><span class="p">]</span><span class="o">:</span><span class="w">  </span><span class="p">(</span><span class="nx">node</span><span class="p">,</span><span class="w"> </span><span class="nx">context</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="kc">undefined</span><span class="p">,</span><span class="w">     </span><span class="c1">// 移除 import</span>
 <span class="w">        </span><span class="p">[</span><span class="nx">ts</span><span class="p">.</span><span class="nx">SyntaxKind</span><span class="p">.</span><span class="nx">ExportDeclaration</span><span class="p">]</span><span class="o">:</span><span class="w">  </span><span class="p">(</span><span class="nx">node</span><span class="p">,</span><span class="w"> </span><span class="nx">context</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="kc">undefined</span><span class="p">,</span><span class="w">     </span><span class="c1">// 移除 export</span>
@@ -68,7 +105,7 @@
 <h3 id="visitclassdeclaration2">类声明核心转换（visitClassDeclaration2）</h3>
 <p>用 <code>____M</code>（或其变体）代替 <code>__TS__Class()</code>，简化类模型，处理 init / private / static。</p>
 <p>核心产出（Lua）：</p>
-<div class="codehilite"><pre><span></span><code class="language-lua"><span class="kd">local</span><span class="w"> </span><span class="nv">____M</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">__TS__Class</span><span class="p">()</span><span class="w">          </span><span class="c1">-- 基础类壳</span>
+<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kd">local</span><span class="w"> </span><span class="nv">____M</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">__TS__Class</span><span class="p">()</span><span class="w">          </span><span class="c1">-- 基础类壳</span>
 <span class="nv">MyClass</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">____M</span><span class="w">                      </span><span class="c1">-- 全局注入</span>
 <span class="kd">local</span><span class="w"> </span><span class="nv">____M</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">MyClass</span><span class="w">                </span><span class="c1">-- 模块变量声明</span>
 <span class="c1">-- ...成员绑定...</span>
@@ -104,7 +141,7 @@
 </ul>
 <h3 id="identifier">特殊标识符（identifier）</h3>
 <p>核心：<code>__FUNC__</code> 魔术常量</p>
-<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">node</span><span class="p">.</span><span class="nx">text</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">&quot;__FUNC__&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="codehilite"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">node</span><span class="p">.</span><span class="nx">text</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">&quot;__FUNC__&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// 自动替换为当前函数名（&quot;类名.方法名&quot; 格式）</span>
 <span class="w">    </span><span class="nx">functionName</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sb">`</span><span class="si">${</span><span class="nx">className</span><span class="si">}</span><span class="sb">.</span><span class="si">${</span><span class="nx">methodName</span><span class="si">}</span><span class="sb">`</span><span class="p">;</span>
 <span class="p">}</span>
@@ -126,7 +163,7 @@
 <p>用 <code>luaparse</code> 解析 Lua AST，定位 <code>luaMInitFunc = function(...)</code> 赋值语句，只保留函数体内部内容，剥离外层变量赋值包裹。</p>
 <h3 id="return">类模块追加 return</h3>
 <p>通过匹配 <code>Xxx.name = "..."</code> 提取类名，文件末尾追加 <code>return ____M</code>。</p>
-<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kd">let</span><span class="w"> </span><span class="nx">match</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">emitFile</span><span class="p">.</span><span class="nx">code</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="sr">/(\w+)\.name\s*=\s*&quot;/</span><span class="p">);</span>
+<div class="codehilite"><pre><span></span><code class="language-lua"><span class="kd">let</span><span class="w"> </span><span class="nx">match</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">emitFile</span><span class="p">.</span><span class="nx">code</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="sr">/(\w+)\.name\s*=\s*&quot;/</span><span class="p">);</span>
 <span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">match</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nx">emitFile</span><span class="p">.</span><span class="nx">code</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">emitFile</span><span class="p">.</span><span class="nx">code</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;\nreturn ____M\n&#39;</span><span class="p">;</span>
 <span class="p">}</span>
@@ -141,7 +178,7 @@
 </ul>
 <h2 id="printerts-lua">printer.ts — 自定义 Lua 打印机</h2>
 <p>继承 <code>LuaPrinter</code>，重写 <code>printFile</code> 在文件头添加注释。</p>
-<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kd">class</span><span class="w"> </span><span class="nx">CustomPrinter</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nx">tstl</span><span class="p">.</span><span class="nx">LuaPrinter</span><span class="w"> </span><span class="p">{</span>
+<div class="codehilite"><pre><span></span><code><span class="kd">class</span><span class="w"> </span><span class="nx">CustomPrinter</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nx">tstl</span><span class="p">.</span><span class="nx">LuaPrinter</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="k">protected</span><span class="w"> </span><span class="nx">printFile</span><span class="p">(</span><span class="nx">file</span><span class="o">:</span><span class="w"> </span><span class="kt">tstl.File</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nx">SourceNode</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="kd">const</span><span class="w"> </span><span class="nx">originalResult</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">super</span><span class="p">.</span><span class="nx">printFile</span><span class="p">(</span><span class="nx">file</span><span class="p">);</span>
 <span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">createSourceNode</span><span class="p">(</span><span class="nx">file</span><span class="p">,</span><span class="w"> </span><span class="p">[</span>
@@ -191,12 +228,15 @@
 <span class="err">│</span><span class="w">    </span><span class="err">→</span><span class="w"> </span><span class="n">afterEmit</span><span class="o">.</span><span class="n">ts</span><span class="p">:</span><span class="w"> </span><span class="err">记录日志，打印原始文件和输出文件路径</span><span class="w">              </span><span class="err">│</span>
 <span class="err">└─────────────────────────────────────────────────────────────────┘</span>
 </code></pre></div></div>
-  <p><a href="/">← Back to home</a></p>
+  <p><a href="/">← 返回首页</a></p>
 </article>
+</main>
 
-  </main>
+  </div>
+
+
   <footer class="container">
-    <p style="text-align:center;">Copyright © 2015-2026 ScvReady Blog Powered by issues-blog.</p>
+    <p style="text-align:center;">Copyright © 2015-2026 胤源 Blog Powered by issues-blog.</p>
   </footer>
 </body>
 </html>

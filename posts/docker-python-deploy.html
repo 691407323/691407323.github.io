@@ -1,33 +1,55 @@
 <!doctype html>
-<html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>ScvReady Blog</title>
+  <title>胤源 Blog</title>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
   <header>
-    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center;">
-      <a href="/" style="position:absolute; left:0; text-decoration:none; padding:8px 12px;">Home</a>
-      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">ScvReady Blog</a></h1>
+    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center; padding-left: 60px; padding-right: 60px;">
+      <div style="position:absolute; left:0; display:flex; gap:8px; align-items:center;">
+        <a href="/" style="text-decoration:none; padding:8px 12px;">首页</a>
+        <a href="/about.html" style="text-decoration:none; padding:8px 12px; color:#666;">关于</a>
+      </div>
+      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">胤源 Blog</a></h1>
     </div>
   </header>
-  <main class="container">
-    
+  
+
+<div class="toc-layout">
+  <nav class="toc-sidebar">
+    <div class="toc-title">目录</div>
+    <div class="toc">
+<ul>
+<li><a href="#_1">项目结构</a></li>
+<li><a href="#python">Python 代码示例</a></li>
+<li><a href="#dockerfile">Dockerfile 示例</a></li>
+<li><a href="#shell">Shell 命令</a></li>
+<li><a href="#yaml">YAML 配置</a></li>
+<li><a href="#json">JSON 配置示例</a></li>
+<li><a href="#_2">部署流程</a></li>
+<li><a href="#_3">小结</a></li>
+</ul>
+</div>
+
+  </nav>
+  <main class="toc-main">
+
 <article class="post">
   <h2>使用 Docker 部署 Python 应用</h2>
   <p class="post-meta">2026-05-28</p>
   <div class="post-body"><p>本文演示如何使用 Docker 容器化部署一个 Python Web 应用，并展示多语言代码高亮效果。</p>
 <h2 id="_1">项目结构</h2>
-<div class="codehilite"><pre><span></span><code class="language-python">myapp/
+<div class="codehilite"><pre><span></span><code>myapp/
 ├── app.py          # Flask 应用
 ├── requirements.txt
 └── Dockerfile
 </code></pre></div>
 
 <h2 id="python">Python 代码示例</h2>
-<div class="codehilite"><pre><span></span><code class="language-dockerfile"><span class="kn">from</span><span class="w"> </span><span class="nn">flask</span><span class="w"> </span><span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">jsonify</span>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">flask</span><span class="w"> </span><span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">jsonify</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
@@ -49,7 +71,7 @@
 </code></pre></div>
 
 <h2 id="dockerfile">Dockerfile 示例</h2>
-<div class="codehilite"><pre><span></span><code class="language-bash"><span class="k">FROM</span><span class="w"> </span><span class="s">python:3.12-slim</span>
+<div class="codehilite"><pre><span></span><code class="language-python"><span class="k">FROM</span><span class="w"> </span><span class="s">python:3.12-slim</span>
 
 <span class="k">WORKDIR</span><span class="w"> </span><span class="s">/app</span>
 <span class="k">COPY</span><span class="w"> </span>requirements.txt<span class="w"> </span>.
@@ -62,7 +84,7 @@
 </code></pre></div>
 
 <h2 id="shell">Shell 命令</h2>
-<div class="codehilite"><pre><span></span><code class="language-yaml"><span class="c1"># 构建镜像</span>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 构建镜像</span>
 docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>myapp:latest<span class="w"> </span>.
 
 <span class="c1"># 运行容器</span>
@@ -77,7 +99,7 @@ curl<span class="w"> </span>http://localhost:8080/api/health
 
 <h2 id="yaml">YAML 配置</h2>
 <p><code>docker-compose.yml</code> 示例：</p>
-<div class="codehilite"><pre><span></span><code class="language-json"><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3.8&quot;</span>
+<div class="codehilite"><pre><span></span><code class="language-dockerfile"><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3.8&quot;</span>
 <span class="nt">services</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">app</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">build</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.</span>
@@ -126,12 +148,15 @@ curl<span class="w"> </span>http://localhost:8080/api/health
 </blockquote>
 <h2 id="_3">小结</h2>
 <p>Docker 让 Python 应用的部署变得简单可靠。通过本文的示例，你可以快速将一个 Flask 应用容器化并部署到任意支持 Docker 的服务器上。</p></div>
-  <p><a href="/">← Back to home</a></p>
+  <p><a href="/">← 返回首页</a></p>
 </article>
+</main>
 
-  </main>
+  </div>
+
+
   <footer class="container">
-    <p style="text-align:center;">Copyright © 2015-2026 ScvReady Blog Powered by issues-blog.</p>
+    <p style="text-align:center;">Copyright © 2015-2026 胤源 Blog Powered by issues-blog.</p>
   </footer>
 </body>
 </html>

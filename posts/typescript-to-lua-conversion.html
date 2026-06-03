@@ -1,20 +1,49 @@
 <!doctype html>
-<html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>ScvReady Blog</title>
+  <title>胤源 Blog</title>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
   <header>
-    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center;">
-      <a href="/" style="position:absolute; left:0; text-decoration:none; padding:8px 12px;">Home</a>
-      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">ScvReady Blog</a></h1>
+    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center; padding-left: 60px; padding-right: 60px;">
+      <div style="position:absolute; left:0; display:flex; gap:8px; align-items:center;">
+        <a href="/" style="text-decoration:none; padding:8px 12px;">首页</a>
+        <a href="/about.html" style="text-decoration:none; padding:8px 12px; color:#666;">关于</a>
+      </div>
+      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">胤源 Blog</a></h1>
     </div>
   </header>
-  <main class="container">
-    
+  
+
+<div class="toc-layout">
+  <nav class="toc-sidebar">
+    <div class="toc-title">目录</div>
+    <div class="toc">
+<ul>
+<li><a href="#vs">类方法 vs 对象方法</a></li>
+<li><a href="#private-public-static">private / public / static</a></li>
+<li><a href="#this">this 参数问题</a></li>
+<li><a href="#_1">初始化与清理</a></li>
+<li><a href="#_2">数组索引问题</a></li>
+<li><a href="#_3">多参数返回</a></li>
+<li><a href="#tstl">TSTL 源码改动记录</a><ul>
+<li><a href="#function-contextts">function-context.ts</a></li>
+<li><a href="#lua-astts">lua-ast.ts</a></li>
+<li><a href="#accessts">access.ts</a></li>
+<li><a href="#callts">call.ts</a></li>
+<li><a href="#functionts">function.ts</a></li>
+</ul>
+</li>
+<li><a href="#_4">小结</a></li>
+</ul>
+</div>
+
+  </nav>
+  <main class="toc-main">
+
 <article class="post">
   <h2>TypeScript 转 Lua 转换规则备忘</h2>
   <p class="post-meta">2025-07-16</p>
@@ -48,7 +77,7 @@
 | 非 <code>static</code> | 对象方法，调用时用 <code>:</code> |</p>
 <h2 id="this">this 参数问题</h2>
 <p>需要在 TS 文件、类、方法上添加 <code>@noSelfInFile</code>、<code>@noSelf</code> 注释，或使用 <code>this: void</code> 来控制 Lua 中是否保留 <code>self</code> 参数。</p>
-<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="cm">/** @noSelfInFile */</span><span class="w">   </span><span class="c1">// 文件级别：文件内的类不会被处理 self</span>
+<div class="codehilite"><pre><span></span><code><span class="cm">/** @noSelfInFile */</span><span class="w">   </span><span class="c1">// 文件级别：文件内的类不会被处理 self</span>
 <span class="cm">/** @noSelf **/</span><span class="w">        </span><span class="c1">// 类或方法级别：不传递 self</span>
 <span class="c1">// 或在方法签名中使用</span>
 <span class="nx">method</span><span class="p">(</span><span class="nx">this</span><span class="o">:</span><span class="w"> </span><span class="kt">void</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">}</span>
@@ -65,7 +94,7 @@
 <blockquote>
 <p>控制这个行为的源码开关是 <code>transformElementAccessArgument</code>，如需修改可定位到 TSTL 源码。</p>
 </blockquote>
-<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="c1">// TS 写法</span>
+<div class="codehilite"><pre><span></span><code><span class="c1">// TS 写法</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">arr</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="mf">1</span><span class="p">,</span><span class="w"> </span><span class="mf">2</span><span class="p">,</span><span class="w"> </span><span class="mf">3</span><span class="p">]</span><span class="w">   </span><span class="c1">// → Lua: {2, 3, 4}（索引 +1）</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">tbl</span><span class="o">:</span><span class="w"> </span><span class="kt">LuaHashTable</span><span class="o">&lt;</span><span class="kt">number</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">[</span><span class="mf">0</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="mf">1</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="mf">1</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="mf">2</span><span class="w"> </span><span class="p">}</span><span class="w">  </span><span class="c1">// → Lua: {[0]=1, [1]=2}（不 +1）</span>
 </code></pre></div>
@@ -101,12 +130,15 @@
 <p><code>static</code> 方法不绑定 <code>self</code> 参数。</p>
 <h2 id="_4">小结</h2>
 <p>本文记录 TypeScriptToLua 转换中最常遇到的核心规则，包括方法调用方式、类型可见性、this 处理、数组索引偏移、多返回值等，以及对应的源码修改。掌握这些规则能大幅减少转译后的调试成本。</p></div>
-  <p><a href="/">← Back to home</a></p>
+  <p><a href="/">← 返回首页</a></p>
 </article>
+</main>
 
-  </main>
+  </div>
+
+
   <footer class="container">
-    <p style="text-align:center;">Copyright © 2015-2026 ScvReady Blog Powered by issues-blog.</p>
+    <p style="text-align:center;">Copyright © 2015-2026 胤源 Blog Powered by issues-blog.</p>
   </footer>
 </body>
 </html>
