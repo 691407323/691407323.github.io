@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>胤源 Blog</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header>
+    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center; padding-left: 60px; padding-right: 60px;">
+      <div style="position:absolute; left:0; display:flex; gap:8px; align-items:center;">
+        <a href="/" style="text-decoration:none; padding:8px 12px;">首页</a>
+        <a href="/about.html" style="text-decoration:none; padding:8px 12px; color:#666;">关于</a>
+      </div>
+      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">胤源 Blog</a></h1>
+    </div>
+  </header>
+  
+
+<div class="toc-layout">
+  <nav class="toc-sidebar">
+    <div class="toc-title">目录</div>
+    <div class="toc">
+<ul>
+<li><a href="#_1">简介</a></li>
+<li><a href="#_2">项目层级</a></li>
+<li><a href="#skynet-cmake-win-bug">Skynet-cmake-win Bug 记录</a><ul>
+<li><a href="#1-unistdh-log">1. 修复 unistd.h 启动 log 调用</a></li>
+<li><a href="#2-windows-socket">2. 修复 Windows 下 socket 断开问题</a></li>
+</ul>
+</li>
+<li><a href="#_3">附录</a><ul>
+<li><a href="#1-lua-winhelp-windows">1. lua-winhelp — Windows 控制台输入模块 [↩]</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+  </nav>
+  <main class="toc-main">
+
+<article class="post">
+  <h2>Skynet-cmake 使用与跨平台修复</h2>
+  <p class="post-meta">2026-06-03</p>
+  <div class="post-body"><h2 id="_1">简介</h2>
+<p>基于 <a href="https://github.com/hanxi/skynet-cmake">hanxi/skynet-cmake</a> 项目，新增 skynet 框架的使用，并做了以下调整和 bug 修复。同时引入 TSTL（TypeScriptToLua）来替代传统 Lua 脚本编写方式。</p>
+<h2 id="_2">项目层级</h2>
+<p>项目目录结构调整如下：</p>
+<pre id="folder-tree">
+core/
+├── skynet/
+├── posix/
+└── pthread-win32/
+cservice_src/
+luaclib_src/
+<a href="#1-lua-winhelp-windows" style="color:#4fc3f7;">[→ lua-winhelp]</a>
+ts/
+├── src/
+├── tools/
+└── interface/
+build/
+buildWin/
+CMakeLists.txt
+</pre>
+
+<h2 id="skynet-cmake-win-bug">Skynet-cmake-win Bug 记录</h2>
+<h3 id="1-unistdh-log">1. 修复 <code>unistd.h</code> 启动 log 调用</h3>
+<p>时间转换函数在 Windows 和 Linux 上表现不一致：</p>
+<ul>
+<li><strong>Windows</strong>: <code>_localtime64(struct tm, time_t)</code></li>
+<li><strong>Linux</strong>: <code>localtime_r(time_t, struct tm)</code></li>
+</ul>
+<p>调用方式需要区分平台，避免参数顺序导致的编译或运行时错误。</p>
+<h3 id="2-windows-socket">2. 修复 Windows 下 socket 断开问题</h3>
+<p>Windows 下 <code>read</code> 函数在 socket 非阻塞模式下遇到 <code>WSAEWOULDBLOCK</code> 时会被当作异常断开。修复方案：</p>
+<div class="codehilite"><pre><span></span><code class="language-c"><span class="kt">int</span><span class="w"> </span><span class="n">wsaerr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WSAGetLastError</span><span class="p">();</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">wsaerr</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">WSAEWOULDBLOCK</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">errno</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">EWOULDBLOCK</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>将 <code>WSAEWOULDBLOCK</code> 映射为 <code>EWOULDBLOCK</code>，使上层逻辑无需区分平台即可正确处理非阻塞读未就绪的情况。</p>
+<h2 id="_3">附录</h2>
+<h3 id="1-lua-winhelp-windows">1. lua-winhelp — Windows 控制台输入模块 <a href="#folder-tree" style="color:#4fc3f7;">[↩]</a></h3>
+<p>在 Windows 平台下，skynet 的控制台输入处理与 Linux 存在差异。<code>lua-winhelp.c</code> 提供了一套 Windows 原生的 stdin 解决方案，通过独立线程异步读取控制台输入，避免阻塞 skynet 主线程。</p>
+<h4 id="_4">核心设计</h4>
+<ul>
+<li>使用 <code>atomic_bool</code> 标记输入是否就绪，实现线程间安全通信</li>
+<li>后台线程通过 <code>fgets</code> 阻塞读取 stdin，就绪后通知主线程</li>
+<li>提供三个 Lua 接口：初始化线程、获取输入结果、关闭线程</li>
+</ul>
+<div class="codehilite"><pre><span></span><code><span class="k">static</span><span class="w"> </span><span class="n">DWORD</span><span class="w"> </span><span class="n">WINAPI</span><span class="w"> </span><span class="n">readInput</span><span class="p">(</span><span class="n">LPVOID</span><span class="w"> </span><span class="n">lpParam</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">while</span><span class="p">(</span><span class="o">!</span><span class="n">input_end</span><span class="p">){</span>
+<span class="w">        </span><span class="n">fgets</span><span class="p">(</span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">input</span><span class="p">),</span><span class="w"> </span><span class="n">stdin</span><span class="p">);</span><span class="w">  </span><span class="c1">// 阻塞读取输入</span>
+<span class="w">        </span><span class="n">input_ready</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TRUE</span><span class="p">;</span><span class="w">                  </span><span class="c1">// 标记输入已准备好</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h4 id="lua">Lua 接口</h4>
+<p>| 函数 | 说明 |
+|------|------|
+| <code>initWinThread()</code> | 启动后台输入线程 |
+| <code>getWinThreadResultFlag()</code> | 获取用户输入字符串，无输入返回 nil |
+| <code>closeWinThread()</code> | 关闭线程并等待退出 |</p>
+<h4 id="_5">完整源码</h4>
+<div class="codehilite"><pre><span></span><code class="language-c"><span class="c1">//</span>
+<span class="c1">// Created by Vermouth on 2024/1/24.</span>
+<span class="c1">//</span>
+
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;lua.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;lauxlib.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;lualib.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;windows.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdatomic.h&gt;</span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">atomic_bool</span><span class="w"> </span><span class="n">input_ready</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ATOMIC_VAR_INIT</span><span class="p">(</span><span class="n">FALSE</span><span class="p">);</span><span class="w">  </span><span class="c1">// 原子变量，表示输入是否准备好</span>
+<span class="k">static</span><span class="w"> </span><span class="n">BOOL</span><span class="w"> </span><span class="n">input_end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FALSE</span><span class="p">;</span>
+<span class="k">static</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="n">input</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span><span class="w">                                   </span><span class="c1">// 存储用户输入的全局变量</span>
+<span class="k">static</span><span class="w"> </span><span class="n">HANDLE</span><span class="w"> </span><span class="n">input_thread</span><span class="p">;</span>
+
+<span class="k">static</span><span class="w"> </span><span class="n">DWORD</span><span class="w"> </span><span class="n">WINAPI</span><span class="w"> </span><span class="n">readInput</span><span class="p">(</span><span class="n">LPVOID</span><span class="w"> </span><span class="n">lpParam</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">while</span><span class="p">(</span><span class="o">!</span><span class="n">input_end</span><span class="p">){</span>
+<span class="w">        </span><span class="n">fgets</span><span class="p">(</span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">input</span><span class="p">),</span><span class="w"> </span><span class="n">stdin</span><span class="p">);</span><span class="w">  </span><span class="c1">// 阻塞读取输入</span>
+<span class="w">        </span><span class="n">input_ready</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TRUE</span><span class="p">;</span><span class="w">                  </span><span class="c1">// 标记输入已准备好</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">linitWinThread</span><span class="p">(</span><span class="n">lua_State</span><span class="w"> </span><span class="o">*</span><span class="n">L</span><span class="p">){</span>
+<span class="w">    </span><span class="n">input_thread</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CreateThread</span><span class="p">(</span>
+<span class="w">            </span><span class="nb">NULL</span><span class="p">,</span><span class="w">          </span><span class="c1">// 默认安全属性</span>
+<span class="w">            </span><span class="mi">0</span><span class="p">,</span><span class="w">             </span><span class="c1">// 默认堆栈大小</span>
+<span class="w">            </span><span class="n">readInput</span><span class="p">,</span><span class="w">     </span><span class="c1">// 线程函数</span>
+<span class="w">            </span><span class="nb">NULL</span><span class="p">,</span><span class="w">          </span><span class="c1">// 参数</span>
+<span class="w">            </span><span class="mi">0</span><span class="p">,</span><span class="w">             </span><span class="c1">// 立即运行线程</span>
+<span class="w">            </span><span class="nb">NULL</span><span class="w">           </span><span class="c1">// 不需要线程ID</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="w">    </span><span class="n">input_ready</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FALSE</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">input_thread</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">NULL</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;无法创建线程</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">lgetWinThreadResultFlag</span><span class="p">(</span><span class="n">lua_State</span><span class="w"> </span><span class="o">*</span><span class="n">L</span><span class="p">){</span>
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">input_ready</span><span class="p">){</span>
+<span class="w">        </span><span class="n">lua_pushstring</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">input</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span><span class="k">else</span><span class="p">{</span>
+<span class="w">        </span><span class="n">lua_pushnil</span><span class="p">(</span><span class="n">L</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">input_ready</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FALSE</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">lcloseWinThread</span><span class="p">(</span><span class="n">lua_State</span><span class="w"> </span><span class="o">*</span><span class="n">L</span><span class="p">){</span>
+<span class="w">    </span><span class="n">input_end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TRUE</span><span class="p">;</span>
+<span class="w">    </span><span class="n">WaitForSingleObject</span><span class="p">(</span><span class="n">input_thread</span><span class="p">,</span><span class="w"> </span><span class="n">INFINITE</span><span class="p">);</span>
+<span class="w">    </span><span class="n">CloseHandle</span><span class="p">(</span><span class="n">input_thread</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">luaL_Reg</span><span class="w"> </span><span class="n">l</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="p">{</span><span class="s">&quot;initWinThread&quot;</span><span class="p">,</span><span class="n">linitWinThread</span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span><span class="s">&quot;getWinThreadResultFlag&quot;</span><span class="p">,</span><span class="n">lgetWinThreadResultFlag</span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span><span class="s">&quot;closeWinThread&quot;</span><span class="p">,</span><span class="n">lcloseWinThread</span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">},</span>
+<span class="p">};</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">luaopen_winhelp</span><span class="p">(</span><span class="n">lua_State</span><span class="w"> </span><span class="o">*</span><span class="n">L</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">luaL_newlib</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">l</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  <p><a href="/">← 返回首页</a></p>
+</article>
+</main>
+
+  </div>
+
+
+  <footer class="container">
+    <p style="text-align:center;">Copyright © 2021-2026 胤源 Blog Powered by issues-blog.</p>
+  </footer>
+</body>
+</html>
