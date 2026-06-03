@@ -70,6 +70,84 @@ description: 将用户输入的文字或文件内容生成为符合博客格式�
 | slug 冲突 | 自动追加编号（slug-2、slug-3...） |
 | 无写入权限 | 提示"无法写入 content/posts/ 目录，请检查权限" |
 
+## 跨页面跳转链接
+
+当文章内容包含多个章节、附录、目录树等结构，需要实现跳转链接时，按以下规则生成。
+
+### 锚点生成规则
+
+使用 python-markdown 的 `toc` 扩展算法：标题文本 **小写**，非字母数字替换为 `-`，去除首尾 `-`。
+
+示例：
+- `### 1. lua-winhelp — Windows 控制台输入模块` → `#1-lua-winhelp-windows`
+- `## 附录：Windows 控制台输入模块 lua-winhelp.c` → `#windows-lua-winhelpc`
+
+### 目录树锚点声明
+
+目录树通常放在 `<pre>` 块中，代码块内的 Markdown 链接语法不会渲染为链接，需使用 HTML `<a>` 标签。给 `<pre>` 加 `id` 属性作为返回目标：
+
+```markdown
+<pre id="folder-tree">
+core/
+├── skynet/
+├── posix/
+└── pthread-win32/
+cservice_src/
+<a href="#1-lua-winhelp-windows" style="color:#4fc3f7;">[→ lua-winhelp]</a>
+ts/
+├── src/
+├── tools/
+└── interface/
+</pre>
+```
+
+### 跳转链接格式
+
+| 类型 | 格式 | 示例 |
+|------|------|------|
+| 正向跳转 | `<a href="#slug" style="color:#4fc3f7;">[→ label]</a>` | `[→ lua-winhelp]` |
+| 返回跳转（独立行） | `<a href="#target-id" style="color:#4fc3f7;">[↩ label]</a>` | `[↩ 返回目录树]` |
+| 返回跳转（标题同行） | 同上，加 `float:right` | 放在标题右侧 |
+
+### 附录标题的返回链接
+
+附录标题右侧放置返回链接。**不要将标题文字本身包裹在自引用链接中**（会导致原地跳转），标题保持纯文本。
+
+返回链接有两种放置方式：
+
+| 方式 | 格式 | 效果 |
+|------|------|------|
+| 同行内联 | `...模块 <a href="#target-id" style="color:#4fc3f7;">[↩]</a>` | `[↩]` 紧跟在标题文字后面 |
+| 同行悬浮 | 同上，加 `float:right` | `[↩]` 靠右，与标题文字分离 |
+
+```markdown
+### 1. lua-winhelp.c — Windows 控制台输入模块 <a href="#folder-tree" style="color:#4fc3f7;">[↩]</a>
+```
+
+### 附录子节层级
+
+编号附录（如 `### 1. xxx`、`### 2. xxx`）下的子节统一使用 `####`（比附录标题深一级）：
+
+```markdown
+## 附录
+
+### 1. lua-winhelp — Windows 控制台输入模块
+#### 核心设计
+#### Lua 接口
+#### 完整源码
+
+### 2. 其他模块
+#### 功能说明
+#### 使用示例
+```
+
+### 注意事项
+
+- `<pre>` 块内的链接使用 HTML `<a href>` 标签，不能用 Markdown 的 `[text](url)` 语法（代码块内容会被转义为纯文本）
+- 所有跳转链接使用统一的浅蓝色 `#4fc3f7`，在深色代码背景下清晰可见
+- 标题行如有自引用需求，使用显式 `<a id="slug"></a>` 放在标题前，而非包裹标题文字
+- 返回链接默认内联放置（不加 `float:right`），仅当需要视觉分离时才使用 `float:right`
+
 ## 示例
 
 **输入（文字）：**
