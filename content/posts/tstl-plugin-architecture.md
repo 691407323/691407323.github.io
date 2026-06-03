@@ -1,5 +1,5 @@
 ---
-title: TypeScriptToLua 自定义插件实现全览
+title: TSTL 插件架构
 date: 2025-03-16
 slug: tstl-plugin-architecture
 ---

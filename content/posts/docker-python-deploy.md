@@ -1,5 +1,5 @@
 ---
-title: 使用 Docker 部署 Python 应用
+title: Docker 部署 Python 应用
 date: 2026-05-28
 slug: docker-python-deploy
 ---

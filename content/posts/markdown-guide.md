@@ -1,5 +1,5 @@
 ---
-title: Markdown 语法完全指南
+title: Markdown 语法指南
 date: 2026-05-29
 slug: markdown-guide
 ---

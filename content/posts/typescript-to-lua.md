@@ -1,7 +1,7 @@
 ---
-title: TypeScript 转 Lua 转换规则备忘
+title: TypeScript to Lua
 date: 2025-07-16
-slug: typescript-to-lua-conversion
+slug: tstl-to-lua-about
 ---
 
 TypeScriptToLua（简称 TSTL）是一个将 TypeScript 代码转译为 Lua 代码的工具。实际使用过程中会遇到很多需要手动处理或记住的规则，本文记录转换过程中的关键注意事项。
