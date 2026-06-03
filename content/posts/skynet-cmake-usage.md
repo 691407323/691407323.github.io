@@ -1,5 +1,5 @@
 ---
-title: Skynet-cmake 使用与跨平台修复
+title: Skynet-cmake 跨平台使用
 date: 2026-06-03
 slug: skynet-cmake-usage
 ---
