@@ -8,6 +8,7 @@ Simple static blog builder:
 from pathlib import Path
 import shutil
 import re
+import sys
 import frontmatter
 import markdown
 from jinja2 import Environment, FileSystemLoader
@@ -39,6 +40,14 @@ def load_posts(dirpath):
             return m.group(1) + cls + '>'
         html = re.sub(r'(<div class="codehilite"><pre><span></span><code)>', _add_lang, html)
         posts.append({'meta': meta, 'content': html, 'toc': toc_html, 'src': md_file})
+    # Check slug collision
+    slugs = {}
+    for p in posts:
+        s = p['meta'].get('slug', p['src'].stem)
+        if s in slugs:
+            print(f'Error: Slug collision! "{s}" from {p["src"].name} conflicts with {slugs[s].name}')
+            sys.exit(1)
+        slugs[s] = p['src']
     posts.sort(key=lambda x: x['meta'].get('date', ''), reverse=True)
     return posts
 
@@ -60,7 +69,7 @@ def build():
         posts = load_posts(root / 'content/posts')
 
         # compute years for footer and site title
-        start_year = 2015
+        start_year = 2021
         current_year = datetime.now().year
         site_title = '胤源 Blog'
 
