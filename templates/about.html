@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="container">
+<article class="post">
+  <h2>关于我</h2>
+  <div class="post-body">{{ content | safe }}</div>
+  <p><a href="/">← 返回首页</a></p>
+</article>
+</main>
+{% endblock %}

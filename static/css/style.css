@@ -8,7 +8,58 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helv
 .posts { list-style:none; padding:0 }
 .posts li { padding:8px 0; border-bottom:1px solid #eee }
 .post-meta { color:#666; font-size:0.9rem }
-pre { background:#222; color:#eee; padding:12px; overflow:auto }
+pre { background:#222; color:#eee; padding:12px; overflow-x: auto; max-width: 100%; box-sizing: border-box; }
 
 /* Footer */
 footer p { text-align: center; }
+
+/* TOC Layout - wrapper for sidebar + main */
+.toc-layout {
+  display: flex;
+}
+
+/* TOC Sidebar - sticky left */
+.toc-sidebar {
+  width: 220px;
+  min-width: 220px;
+  height: auto;
+  max-height: 100vh;
+  padding: 24px 16px;
+  overflow-y: auto;
+  border-right: 1px solid #e0e0e0;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+}
+.toc-title {
+  font-weight: bold;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+  color: #333;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+.toc-sidebar ul { list-style: none; padding-left: 0; margin: 0; }
+.toc-sidebar ul ul { padding-left: 16px; }
+.toc-sidebar li { margin: 6px 0; }
+.toc-sidebar a { text-decoration: none; color: #666; font-size: 0.85rem; line-height: 1.4; display: block; }
+.toc-sidebar a:hover { color: #222; }
+
+.toc-main { flex: 1; min-width: 0; padding: 24px; }
+
+@media (max-width: 900px) {
+  .toc-layout {
+    flex-direction: column;
+  }
+  .toc-sidebar {
+    position: static;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 16px;
+  }
+}

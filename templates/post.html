@@ -1,9 +1,23 @@
 {% extends "base.html" %}
 {% block content %}
+{% if toc %}
+<div class="toc-layout">
+  <nav class="toc-sidebar">
+    <div class="toc-title">目录</div>
+    {{ toc | safe }}
+  </nav>
+  <main class="toc-main">
+{% else %}
+<main class="container">
+{% endif %}
 <article class="post">
   <h2>{{ post.title }}</h2>
   <p class="post-meta">{{ post.date }}</p>
   <div class="post-body">{{ content | safe }}</div>
-  <p><a href="/">← Back to home</a></p>
+  <p><a href="/">← 返回首页</a></p>
 </article>
+</main>
+{% if toc %}
+  </div>
+{% endif %}
 {% endblock %}

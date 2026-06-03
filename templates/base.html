@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -8,14 +8,15 @@
 </head>
 <body>
   <header>
-    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center;">
-      <a href="/" style="position:absolute; left:0; text-decoration:none; padding:8px 12px;">Home</a>
-      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">{{ site_title or 'ScvReady Blog' }}</a></h1>
+    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center; padding-left: 60px; padding-right: 60px;">
+      <div style="position:absolute; left:0; display:flex; gap:8px; align-items:center;">
+        <a href="/" style="text-decoration:none; padding:8px 12px;">首页</a>
+        <a href="/about.html" style="text-decoration:none; padding:8px 12px; color:#666;">关于</a>
+      </div>
+      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">{{ site_title or '胤源 Blog' }}</a></h1>
     </div>
   </header>
-  <main class="container">
-    {% block content %}{% endblock %}
-  </main>
+  {% block content %}{% endblock %}
   <footer class="container">
     <p style="text-align:center;">Copyright © {{ start_year }}-{{ current_year }} {{ site_title }} Powered by issues-blog.</p>
   </footer>
