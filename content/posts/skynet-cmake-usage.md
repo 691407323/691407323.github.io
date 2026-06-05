@@ -17,8 +17,8 @@ core/
 ├── skynet/
 ├── posix/
 └── pthread-win32/
-cservice_src/
-luaclib_src/
+cservice-src/
+luaclib-src/
 └── <a href="#1-lua-winhelp-windows" style="color:#4fc3f7;">[→ lua-winhelp]</a>
 ts/
 ├── src/
