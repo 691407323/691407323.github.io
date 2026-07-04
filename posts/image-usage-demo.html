@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>在博客中插入图片示例 · 胤源 Blog</title>
+  <meta name="description" content="演示在本项目中如何添加/引用图片，含 cover 封面、WebP 自动优化、缩略图与点击放大。">
+  <meta name="author" content="胤源">
+  <link rel="canonical" href="https://691407323.github.io/posts/image-usage-demo.html">
+  <link rel="alternate" type="application/atom+xml" title="胤源 Blog" href="/feed.xml">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="在博客中插入图片示例">
+  <meta property="og:description" content="演示在本项目中如何添加/引用图片，含 cover 封面、WebP 自动优化、缩略图与点击放大。">
+  <meta property="og:url" content="https://691407323.github.io/posts/image-usage-demo.html">
+  <meta property="og:image" content="https://691407323.github.io/static/images/sample-desktop.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="/static/css/style.css">
+<!-- M-08: KaTeX CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script defer>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof renderMathInElement === 'function') {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '\('', right: '\)', display: false},
+          {left: '\[', right: '\]', display: true}
+        ],
+        throwOnError: false
+      });
+    }
+  });
+</script>
+<!-- M-09: Mermaid CDN -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'default', securityLevel:'loose'});</script>
+</head>
+<body>
+<header>
+  <div class="header-inner container">
+    <div class="nav-left">
+      <a href="/" class="nav-link">首页</a>
+      <a href="/about.html" class="nav-link">关于</a>
+      <span class="nav-divider"></span>
+      <a href="/tags.html" class="nav-link">标签</a>
+      <a href="/archive.html" class="nav-link">归档</a>
+      <span class="nav-divider"></span>
+      <a href="/search.html" class="nav-link">?</a>
+      <button id="theme-toggle" class="nav-link">🌙</button>
+    </div>
+    <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">胤源 Blog</a></h1>
+  </div>
+</header>
+
+
+<div class="toc-layout">
+  <nav class="toc-sidebar">
+    <div class="toc-title">目录</div>
+    <div class="toc">
+<ul>
+<li><a href="#_1">一、图片放在哪里</a></li>
+<li><a href="#_2">二、正文插入图片（直接用原图）</a></li>
+<li><a href="#webp">三、用自动生成的 WebP（推荐）</a></li>
+<li><a href="#_3">四、缩略图 + 点击放大</a></li>
+<li><a href="#cover-ogimage">五、封面图（cover 字段 → og:image）</a></li>
+<li><a href="#_4">六、完整工作流</a></li>
+<li><a href="#_5">七、关键提醒与小坑</a></li>
+</ul>
+</div>
+
+  </nav>
+  <main class="toc-main">
+  
+  <article class="post">
+    <h2>在博客中插入图片示例</h2>
+    <p class="post-meta">2026-07-04 · 阅读 2 分钟</p>
+    <div class="post-body"><blockquote>
+<p>本篇是本项目的「图片使用手册」，把图片从放进仓库到前端展示的完整链路走一遍。
+涉及模块：M-4 front matter 的 <code>cover</code>/<code>tags</code> 字段、M-13 图片自动 WebP + 缩略图、M-14 <code>og:image</code>。</p>
+</blockquote>
+<h2 id="_1">一、图片放在哪里</h2>
+<p>本项目的图片统一放在 <code>static/images/</code> 目录下。构建时 <code>build.py</code> 会把整个 <code>static/</code> 原样复制到 <code>_site/static/</code>，所以图片最终可访问路径为：</p>
+<div class="highlight"><pre><span></span><code>/static/images/&lt;文件名&gt;
+</code></pre></div>
+
+<p>对应的项目结构：</p>
+<div class="highlight"><pre><span></span><code>Blog/
+├── content/posts/        # Markdown 文章
+├── static/images/        # ← 图片放这里
+│   └── sample-desktop.png
+├── build.py              # 构建脚本（含 M-13 图片处理）
+└── _site/                # 构建产物（部署目录）
+    └── static/images/
+        ├── sample-desktop.png           # 原图（原样复制）
+        ├── sample-desktop.webp           # ← 构建自动生成，主图
+        └── sample-desktop_thumb.webp    # ← 构建自动生成，缩略图
+</code></pre></div>
+
+<blockquote>
+<p>⚠️ <strong>关键决策</strong>：Markdown 里的图片路径<strong>不会被自动改写</strong>（参见 <code>PLAN.md</code> M-13）。想用 <code>.webp</code> 就手写 <code>.webp</code>，想用 <code>.png</code> 就保留 <code>.png</code>。这避免了"自动替换但链接算不准"的坑。</p>
+</blockquote>
+<h2 id="_2">二、正文插入图片（直接用原图）</h2>
+<p>标准 Markdown 语法，绝对路径引用：</p>
+<div class="highlight"><pre><span></span><code>![<span class="nt">示例图片</span>](<span class="na">/static/images/sample-desktop.png</span>)
+</code></pre></div>
+
+<p>效果如下（这是原图 <code>sample-desktop.png</code>，457KB）：</p>
+<p><img alt="示例图片" src="/static/images/sample-desktop.png" /></p>
+<h2 id="webp">三、用自动生成的 WebP（推荐）</h2>
+<p>构建时 <code>build.py</code> 的 <code>process_images()</code> 会为每张 PNG/JPG 自动生成：</p>
+<p>| 产物 | 宽度 | 体积 | 用途 |
+|------|------|------|------|
+| <code>sample-desktop.png</code> | 775px | 457KB | 原图，原样复制 |
+| <code>sample-desktop.webp</code> | 775px | <strong>55KB</strong> | 主图，质量 82，体积 <strong>↓88%</strong> |
+| <code>sample-desktop_thumb.webp</code> | 480px | <strong>20KB</strong> | 缩略图，列表/卡片场景 |</p>
+<p>同样一张图，引用 <code>.webp</code> 即可享受 8 倍体积优势：</p>
+<div class="highlight"><pre><span></span><code>![<span class="nt">示例图片 WebP</span>](<span class="na">/static/images/sample-desktop.webp</span>)
+</code></pre></div>
+
+<p><img alt="示例图片 WebP" src="/static/images/sample-desktop.webp" /></p>
+<p>肉眼几乎看不出差别，但读者流量省了近 400KB。</p>
+<h2 id="_3">四、缩略图 + 点击放大</h2>
+<p>缩略图 <code>_thumb.webp</code> 适合正文预览，链接指向大图，用户点开再加载完整图：</p>
+<div class="highlight"><pre><span></span><code>[<span class="nt">![缩略图</span>](<span class="na">/static/images/sample-desktop_thumb.webp</span>)](/static/images/sample-desktop.webp)
+</code></pre></div>
+
+<p>效果（点缩略图跳转到主图）：</p>
+<p><a href="/static/images/sample-desktop.webp"><img alt="缩略图" src="/static/images/sample-desktop_thumb.webp" /></a></p>
+<h2 id="cover-ogimage">五、封面图（cover 字段 → og:image）</h2>
+<p>在 front matter 用 <code>cover</code> 指定，构建时会自动拼成 <code>og:image</code> 绝对 URL，用于社交平台分享卡片：</p>
+<div class="highlight"><pre><span></span><code><span class="nn">---</span>
+<span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">在博客中插入图片示例</span>
+<span class="nt">cover</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">static/images/sample-desktop.png</span>
+<span class="nn">---</span>
+</code></pre></div>
+
+<p>注意 front matter 里<strong>不加前导斜杠</strong>（写 <code>static/...</code>）。构建时 <code>build.py</code> 会拼成：</p>
+<div class="highlight"><pre><span></span><code>https://691407323.github.io/static/images/sample-desktop.png
+</code></pre></div>
+
+<blockquote>
+<p>👉 在本页面右键「查看网页源代码」，搜 <code>og:image</code> 就能看到这行已自动渲染。
+M-14 的设计是<strong>条件输出</strong>：没有 <code>cover</code> 的文章不会输出空的 <code>og:image</code> 标签。</p>
+</blockquote>
+<h2 id="_4">六、完整工作流</h2>
+<ol>
+<li>把图片放进 <code>static/images/</code>（建议英文/数字命名）</li>
+<li>运行 <code>python3 build.py</code></li>
+<li><code>process_images()</code> 自动为每张 PNG/JPG 生成 <code>.webp</code> + <code>_thumb.webp</code></li>
+<li>在 Markdown 正文里引用产物路径（<code>.webp</code> 最省流量）</li>
+<li>需要社交分享卡片时，在 front matter 加 <code>cover:</code></li>
+<li>提交 <code>_site/</code> 到 Pages 仓库即可线上生效</li>
+</ol>
+<h2 id="_5">七、关键提醒与小坑</h2>
+<ul>
+<li><strong>路径不自动改写</strong>：写文章时直接用最终产物路径，不要等构建去替换</li>
+<li><strong>增量跳过</strong>：源图没改时下次构建会跳过（看日志 <code>0 张生成，1 张跳过</code>），不会重复转</li>
+<li><strong>Pillow 软依赖</strong>：没安装 Pillow 时构建照常通过，只是跳过图片处理并打印提示，不报错</li>
+<li><strong>中文文件名</strong>：理论上可用，但会触发 URL 编码，强烈建议英文/数字命名</li>
+<li><strong>WebP 兼容率 95%+</strong>：本项目决策是只转 WebP 不保留原格式兜底，读者群体浏览器足够新</li>
+<li><strong>移动端自适应</strong>：CSS 已设置 <code>.post-body img { max-width:100% }</code>（见 <code>static/css/style.css:48</code>），无需手动控制宽度</li>
+<li><strong><code>cover</code> 是分享卡片缩略图</strong>，不是文章顶部的 banner；要做文章头图需要自己在正文最上方插一张图</li>
+</ul></div>
+    
+    <div class="post-tags">
+      
+      <a href="/tags/%E6%95%99%E7%A8%8B.html" class="tag-inline">教程</a>
+      
+      <a href="/tags/%E5%9B%BE%E7%89%87.html" class="tag-inline">图片</a>
+      
+    </div>
+    
+    
+
+    
+    <section style="max-width:800px; margin:32px auto; padding:0 24px;">
+      <h3 style="border-top:1px solid var(--border-color); padding-top:24px;">评论</h3>
+      <script src="https://giscus.app/client.js"
+              data-repo="691407323/691407323.github.io"
+              data-repo-id="R_kgDOSqX-lw"
+              data-category="Announcements"
+              data-category-id="DIC_kwDOSqX-l84DAdPg"
+              data-mapping="pathname"
+              data-strict="0"
+              data-reactions-enabled="1"
+              data-emit-metadata="0"
+              data-input-position="bottom"
+              data-theme="preferred_color_scheme"
+              data-lang="zh-CN"
+              crossorigin="anonymous"
+              async>
+      </script>
+    </section>
+    
+
+    <p><a href="/">← 返回首页</a></p>
+  </article>
+  </main>
+  
+  </div>
+  
+  
+<footer class="container">
+  <p class="footer-text">Copyright &copy; 2021-2026 胤源 Blog Powered by issues-blog.</p>
+</footer>
+<script src="/static/js/code-copy.js"></script>
+<script src="/static/js/theme.js"></script>
+
+</body>
+</html>

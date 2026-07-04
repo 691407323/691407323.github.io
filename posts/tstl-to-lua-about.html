@@ -3,20 +3,57 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>胤源 Blog</title>
+  <title>TSTL 改动 · 胤源 Blog</title>
+  <meta name="description" content="极简静态博客，Markdown 写作，Python 构建">
+  <meta name="author" content="胤源">
+  <link rel="canonical" href="https://691407323.github.io/posts/tstl-to-lua-about.html">
+  <link rel="alternate" type="application/atom+xml" title="胤源 Blog" href="/feed.xml">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="TSTL 改动">
+  <meta property="og:description" content="极简静态博客，Markdown 写作，Python 构建">
+  <meta property="og:url" content="https://691407323.github.io/posts/tstl-to-lua-about.html">
+  
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/static/css/style.css">
+<!-- M-08: KaTeX CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script defer>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof renderMathInElement === 'function') {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '\('', right: '\)', display: false},
+          {left: '\[', right: '\]', display: true}
+        ],
+        throwOnError: false
+      });
+    }
+  });
+</script>
+<!-- M-09: Mermaid CDN -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'default', securityLevel:'loose'});</script>
 </head>
 <body>
-  <header>
-    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center; padding-left: 60px; padding-right: 60px;">
-      <div style="position:absolute; left:0; display:flex; gap:8px; align-items:center;">
-        <a href="/" style="text-decoration:none; padding:8px 12px;">首页</a>
-        <a href="/about.html" style="text-decoration:none; padding:8px 12px; color:#666;">关于</a>
-      </div>
-      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">胤源 Blog</a></h1>
+<header>
+  <div class="header-inner container">
+    <div class="nav-left">
+      <a href="/" class="nav-link">首页</a>
+      <a href="/about.html" class="nav-link">关于</a>
+      <span class="nav-divider"></span>
+      <a href="/tags.html" class="nav-link">标签</a>
+      <a href="/archive.html" class="nav-link">归档</a>
+      <span class="nav-divider"></span>
+      <a href="/search.html" class="nav-link">?</a>
+      <button id="theme-toggle" class="nav-link">🌙</button>
     </div>
-  </header>
-  
+    <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">胤源 Blog</a></h1>
+  </div>
+</header>
+
 
 <div class="toc-layout">
   <nav class="toc-sidebar">
@@ -43,11 +80,11 @@
 
   </nav>
   <main class="toc-main">
-
-<article class="post">
-  <h2>TSTL 改动</h2>
-  <p class="post-meta">2025-07-16</p>
-  <div class="post-body"><p>TypeScriptToLua（简称 TSTL）是一个将 TypeScript 代码转译为 Lua 代码的工具。实际使用过程中会遇到很多需要手动处理或记住的规则，本文记录转换过程中的关键注意事项。</p>
+  
+  <article class="post">
+    <h2>TSTL 改动</h2>
+    <p class="post-meta">2025-07-16 · 阅读 2 分钟</p>
+    <div class="post-body"><p>TypeScriptToLua（简称 TSTL）是一个将 TypeScript 代码转译为 Lua 代码的工具。实际使用过程中会遇到很多需要手动处理或记住的规则，本文记录转换过程中的关键注意事项。</p>
 <h2 id="vs">类方法 vs 对象方法</h2>
 <p>Lua 中使用 <code>:</code> 调用时，会自动传入 <code>self</code> 作为第一个参数；使用 <code>.</code> 调用时则需要显式传参。</p>
 <p>TS 中的约定与 Lua 的对应关系：</p>
@@ -57,7 +94,7 @@
 | 对象方法（非 <code>static</code>） | <code>self:xxx()</code> |</p>
 <p>注意 TS 中 <code>any</code> 类型转换后也会变成 <code>::</code> 调用，因此需要对 Lua 模块文件名定义一些通用类型，例如直接定义类型、<code>typeof</code> 继承类型、<code>as unknown as xxx</code> 等方式。</p>
 <h2 id="private-public-static">private / public / static</h2>
-<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="c1">// TS 写法</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// TS 写法</span>
 <span class="kd">class</span><span class="w"> </span><span class="nx">Foo</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="k">private</span><span class="w"> </span><span class="k">static</span><span class="w"> </span><span class="nx">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;1.0&quot;</span><span class="w">   </span><span class="c1">// → Lua: local 变量</span>
 <span class="w">    </span><span class="k">public</span><span class="w"> </span><span class="k">static</span><span class="w"> </span><span class="nx">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;foo&quot;</span><span class="w">        </span><span class="c1">// → Lua: 模块级全局变量</span>
@@ -77,7 +114,7 @@
 | 非 <code>static</code> | 对象方法，调用时用 <code>:</code> |</p>
 <h2 id="this">this 参数问题</h2>
 <p>需要在 TS 文件、类、方法上添加 <code>@noSelfInFile</code>、<code>@noSelf</code> 注释，或使用 <code>this: void</code> 来控制 Lua 中是否保留 <code>self</code> 参数。</p>
-<div class="codehilite"><pre><span></span><code><span class="cm">/** @noSelfInFile */</span><span class="w">   </span><span class="c1">// 文件级别：文件内的类不会被处理 self</span>
+<div class="highlight"><pre><span></span><code><span class="cm">/** @noSelfInFile */</span><span class="w">   </span><span class="c1">// 文件级别：文件内的类不会被处理 self</span>
 <span class="cm">/** @noSelf **/</span><span class="w">        </span><span class="c1">// 类或方法级别：不传递 self</span>
 <span class="c1">// 或在方法签名中使用</span>
 <span class="nx">method</span><span class="p">(</span><span class="nx">this</span><span class="o">:</span><span class="w"> </span><span class="kt">void</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">}</span>
@@ -85,7 +122,7 @@
 
 <h2 id="_1">初始化与清理</h2>
 <p>TS 中可提供两个特殊函数，对应 Lua 生命周期：</p>
-<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kd">function</span><span class="w"> </span><span class="nx">luaMInit</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="kd">function</span><span class="w"> </span><span class="nx">luaMInit</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">}</span>
 <span class="kd">function</span><span class="w"> </span><span class="nx">luaMFinal</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div>
 
@@ -94,14 +131,14 @@
 <blockquote>
 <p>控制这个行为的源码开关是 <code>transformElementAccessArgument</code>，如需修改可定位到 TSTL 源码。</p>
 </blockquote>
-<div class="codehilite"><pre><span></span><code><span class="c1">// TS 写法</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// TS 写法</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">arr</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="mf">1</span><span class="p">,</span><span class="w"> </span><span class="mf">2</span><span class="p">,</span><span class="w"> </span><span class="mf">3</span><span class="p">]</span><span class="w">   </span><span class="c1">// → Lua: {2, 3, 4}（索引 +1）</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">tbl</span><span class="o">:</span><span class="w"> </span><span class="kt">LuaHashTable</span><span class="o">&lt;</span><span class="kt">number</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">[</span><span class="mf">0</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="mf">1</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="mf">1</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="mf">2</span><span class="w"> </span><span class="p">}</span><span class="w">  </span><span class="c1">// → Lua: {[0]=1, [1]=2}（不 +1）</span>
 </code></pre></div>
 
 <h2 id="_3">多参数返回</h2>
 <p>使用 <code>$multi</code> 注解函数可返回多个值。使用 <code>...</code> 展开多参数时，部分场景需要配合 <code>any</code> 返回类型和去掉 <code>createUnpackCall</code> 来正确处理。</p>
-<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kd">function</span><span class="w"> </span><span class="nx">getPos</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="nx">$multi</span><span class="o">&lt;</span><span class="p">{</span><span class="w"> </span><span class="nx">x</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="w"> </span><span class="p">}</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="kd">function</span><span class="w"> </span><span class="nx">getPos</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="nx">$multi</span><span class="o">&lt;</span><span class="p">{</span><span class="w"> </span><span class="nx">x</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="w"> </span><span class="p">}</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">}</span>
 
 <span class="c1">// 调用方式</span>
 <span class="kd">let</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">x</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">getPos</span><span class="p">()</span><span class="w">     </span><span class="c1">// 解构赋值</span>
@@ -130,15 +167,52 @@
 <p><code>static</code> 方法不绑定 <code>self</code> 参数。</p>
 <h2 id="_4">小结</h2>
 <p>本文记录 TypeScriptToLua 转换中最常遇到的核心规则，包括方法调用方式、类型可见性、this 处理、数组索引偏移、多返回值等，以及对应的源码修改。掌握这些规则能大幅减少转译后的调试成本。</p></div>
-  <p><a href="/">← 返回首页</a></p>
-</article>
-</main>
+    
+    <div class="post-tags">
+      
+      <a href="/tags/TSTL.html" class="tag-inline">TSTL</a>
+      
+      <a href="/tags/TypeScript.html" class="tag-inline">TypeScript</a>
+      
+      <a href="/tags/Lua.html" class="tag-inline">Lua</a>
+      
+    </div>
+    
+    
 
+    
+    <section style="max-width:800px; margin:32px auto; padding:0 24px;">
+      <h3 style="border-top:1px solid var(--border-color); padding-top:24px;">评论</h3>
+      <script src="https://giscus.app/client.js"
+              data-repo="691407323/691407323.github.io"
+              data-repo-id="R_kgDOSqX-lw"
+              data-category="Announcements"
+              data-category-id="DIC_kwDOSqX-l84DAdPg"
+              data-mapping="pathname"
+              data-strict="0"
+              data-reactions-enabled="1"
+              data-emit-metadata="0"
+              data-input-position="bottom"
+              data-theme="preferred_color_scheme"
+              data-lang="zh-CN"
+              crossorigin="anonymous"
+              async>
+      </script>
+    </section>
+    
+
+    <p><a href="/">← 返回首页</a></p>
+  </article>
+  </main>
+  
   </div>
+  
+  
+<footer class="container">
+  <p class="footer-text">Copyright &copy; 2021-2026 胤源 Blog Powered by issues-blog.</p>
+</footer>
+<script src="/static/js/code-copy.js"></script>
+<script src="/static/js/theme.js"></script>
 
-
-  <footer class="container">
-    <p style="text-align:center;">Copyright © 2021-2026 胤源 Blog Powered by issues-blog.</p>
-  </footer>
 </body>
 </html>

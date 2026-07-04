@@ -4,22 +4,61 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>胤源 Blog</title>
+  <meta name="description" content="极简静态博客，Markdown 写作，Python 构建">
+  <meta name="author" content="胤源">
+  <link rel="canonical" href="https://691407323.github.io/">
+  <link rel="alternate" type="application/atom+xml" title="胤源 Blog" href="/feed.xml">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="胤源 Blog">
+  <meta property="og:description" content="极简静态博客，Markdown 写作，Python 构建">
+  <meta property="og:url" content="https://691407323.github.io/">
+  
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/static/css/style.css">
+<!-- M-08: KaTeX CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script defer>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof renderMathInElement === 'function') {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '\('', right: '\)', display: false},
+          {left: '\[', right: '\]', display: true}
+        ],
+        throwOnError: false
+      });
+    }
+  });
+</script>
+<!-- M-09: Mermaid CDN -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'default', securityLevel:'loose'});</script>
 </head>
 <body>
-  <header>
-    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center; padding-left: 60px; padding-right: 60px;">
-      <div style="position:absolute; left:0; display:flex; gap:8px; align-items:center;">
-        <a href="/" style="text-decoration:none; padding:8px 12px;">首页</a>
-        <a href="/about.html" style="text-decoration:none; padding:8px 12px; color:#666;">关于</a>
-      </div>
-      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">胤源 Blog</a></h1>
+<header>
+  <div class="header-inner container">
+    <div class="nav-left">
+      <a href="/" class="nav-link">首页</a>
+      <a href="/about.html" class="nav-link">关于</a>
+      <span class="nav-divider"></span>
+      <a href="/tags.html" class="nav-link">标签</a>
+      <a href="/archive.html" class="nav-link">归档</a>
+      <span class="nav-divider"></span>
+      <a href="/search.html" class="nav-link">?</a>
+      <button id="theme-toggle" class="nav-link">🌙</button>
     </div>
-  </header>
-  
+    <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">胤源 Blog</a></h1>
+  </div>
+</header>
+
 <main class="container">
 <section>
   <ul class="posts">
+  
+    <li><a href="/posts/image-usage-demo.html">在博客中插入图片示例</a> <small>2026-07-04</small></li>
   
     <li><a href="/posts/skynet-cmake-usage.html">Skynet-cmake 跨平台使用</a> <small>2026-06-03</small></li>
   
@@ -35,8 +74,11 @@
 </section>
 </main>
 
-  <footer class="container">
-    <p style="text-align:center;">Copyright © 2021-2026 胤源 Blog Powered by issues-blog.</p>
-  </footer>
+<footer class="container">
+  <p class="footer-text">Copyright &copy; 2021-2026 胤源 Blog Powered by issues-blog.</p>
+</footer>
+<script src="/static/js/code-copy.js"></script>
+<script src="/static/js/theme.js"></script>
+
 </body>
 </html>

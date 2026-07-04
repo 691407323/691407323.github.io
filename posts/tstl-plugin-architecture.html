@@ -3,20 +3,57 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>胤源 Blog</title>
+  <title>TSTL 插件架构 · 胤源 Blog</title>
+  <meta name="description" content="极简静态博客，Markdown 写作，Python 构建">
+  <meta name="author" content="胤源">
+  <link rel="canonical" href="https://691407323.github.io/posts/tstl-plugin-architecture.html">
+  <link rel="alternate" type="application/atom+xml" title="胤源 Blog" href="/feed.xml">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="TSTL 插件架构">
+  <meta property="og:description" content="极简静态博客，Markdown 写作，Python 构建">
+  <meta property="og:url" content="https://691407323.github.io/posts/tstl-plugin-architecture.html">
+  
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/static/css/style.css">
+<!-- M-08: KaTeX CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script defer>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof renderMathInElement === 'function') {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '\('', right: '\)', display: false},
+          {left: '\[', right: '\]', display: true}
+        ],
+        throwOnError: false
+      });
+    }
+  });
+</script>
+<!-- M-09: Mermaid CDN -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'default', securityLevel:'loose'});</script>
 </head>
 <body>
-  <header>
-    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center; padding-left: 60px; padding-right: 60px;">
-      <div style="position:absolute; left:0; display:flex; gap:8px; align-items:center;">
-        <a href="/" style="text-decoration:none; padding:8px 12px;">首页</a>
-        <a href="/about.html" style="text-decoration:none; padding:8px 12px; color:#666;">关于</a>
-      </div>
-      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">胤源 Blog</a></h1>
+<header>
+  <div class="header-inner container">
+    <div class="nav-left">
+      <a href="/" class="nav-link">首页</a>
+      <a href="/about.html" class="nav-link">关于</a>
+      <span class="nav-divider"></span>
+      <a href="/tags.html" class="nav-link">标签</a>
+      <a href="/archive.html" class="nav-link">归档</a>
+      <span class="nav-divider"></span>
+      <a href="/search.html" class="nav-link">?</a>
+      <button id="theme-toggle" class="nav-link">🌙</button>
     </div>
-  </header>
-  
+    <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">胤源 Blog</a></h1>
+  </div>
+</header>
+
 
 <div class="toc-layout">
   <nav class="toc-sidebar">
@@ -51,11 +88,11 @@
 
   </nav>
   <main class="toc-main">
-
-<article class="post">
-  <h2>TSTL 插件架构</h2>
-  <p class="post-meta">2025-03-16</p>
-  <div class="post-body"><p>本文系统梳理一套基于 TypeScriptToLua (TSTL) 的自定义插件的完整实现，涵盖从增量编译到 AST 转换、代码生成的全流程。</p>
+  
+  <article class="post">
+    <h2>TSTL 插件架构</h2>
+    <p class="post-meta">2025-03-16 · 阅读 4 分钟</p>
+    <div class="post-body"><p>本文系统梳理一套基于 TypeScriptToLua (TSTL) 的自定义插件的完整实现，涵盖从增量编译到 AST 转换、代码生成的全流程。</p>
 <h2 id="_1">整体架构</h2>
 <p>这套插件的核心目标：</p>
 <ul>
@@ -69,7 +106,7 @@
 <h2 id="beforetransformts">beforeTransform.ts — 增量编译</h2>
 <p>实现增量编译 + 自动复制非 TS 资源文件到输出目录。</p>
 <p>通过 <code>file-timestamps.txt</code> 记录每个源文件的 ctime+mtime 组合，判断文件是否有变化。未变化的文件从 <code>program.getSourceFiles()</code> 中移除，TSTL 直接跳过。同时递归复制非 <code>.ts</code> 资源文件到输出目录，同样带时间戳校验。</p>
-<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kd">class</span><span class="w"> </span><span class="nx">Plugin</span><span class="w"> </span><span class="k">implements</span><span class="w"> </span><span class="nx">tstl</span><span class="p">.</span><span class="nx">Plugin</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="kd">class</span><span class="w"> </span><span class="nx">Plugin</span><span class="w"> </span><span class="k">implements</span><span class="w"> </span><span class="nx">tstl</span><span class="p">.</span><span class="nx">Plugin</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="k">private</span><span class="w"> </span><span class="nx">unchangedFiles</span><span class="o">:</span><span class="w"> </span><span class="kt">ts.SourceFile</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[];</span>
 <span class="w">    </span><span class="k">private</span><span class="w"> </span><span class="nx">timestamps</span><span class="o">:</span><span class="w"> </span><span class="kt">Record</span><span class="o">&lt;</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="kt">string</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{};</span>
 <span class="w">    </span><span class="k">private</span><span class="w"> </span><span class="nx">timestampFile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">path</span><span class="p">.</span><span class="nx">resolve</span><span class="p">(</span><span class="s2">&quot;./&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;file-timestamps.txt&quot;</span><span class="p">);</span>
@@ -87,7 +124,7 @@
 <h2 id="visitorsts-ast">visitors.ts — 核心 AST 转换（最重要）</h2>
 <p>注册了多个自定义 Visitor，重写默认的 TS→Lua 转换逻辑。</p>
 <h3 id="_2">注册入口</h3>
-<div class="codehilite"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">plugin</span><span class="o">:</span><span class="w"> </span><span class="kt">tstl.Plugin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">plugin</span><span class="o">:</span><span class="w"> </span><span class="kt">tstl.Plugin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nx">visitors</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="p">[</span><span class="nx">ts</span><span class="p">.</span><span class="nx">SyntaxKind</span><span class="p">.</span><span class="nx">ImportDeclaration</span><span class="p">]</span><span class="o">:</span><span class="w">  </span><span class="p">(</span><span class="nx">node</span><span class="p">,</span><span class="w"> </span><span class="nx">context</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="kc">undefined</span><span class="p">,</span><span class="w">     </span><span class="c1">// 移除 import</span>
 <span class="w">        </span><span class="p">[</span><span class="nx">ts</span><span class="p">.</span><span class="nx">SyntaxKind</span><span class="p">.</span><span class="nx">ExportDeclaration</span><span class="p">]</span><span class="o">:</span><span class="w">  </span><span class="p">(</span><span class="nx">node</span><span class="p">,</span><span class="w"> </span><span class="nx">context</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="kc">undefined</span><span class="p">,</span><span class="w">     </span><span class="c1">// 移除 export</span>
@@ -105,7 +142,7 @@
 <h3 id="visitclassdeclaration2">类声明核心转换（visitClassDeclaration2）</h3>
 <p>用 <code>____M</code>（或其变体）代替 <code>__TS__Class()</code>，简化类模型，处理 init / private / static。</p>
 <p>核心产出（Lua）：</p>
-<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kd">local</span><span class="w"> </span><span class="nv">____M</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">__TS__Class</span><span class="p">()</span><span class="w">          </span><span class="c1">-- 基础类壳</span>
+<div class="highlight"><pre><span></span><code><span class="kd">local</span><span class="w"> </span><span class="nv">____M</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">__TS__Class</span><span class="p">()</span><span class="w">          </span><span class="c1">-- 基础类壳</span>
 <span class="nv">MyClass</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">____M</span><span class="w">                      </span><span class="c1">-- 全局注入</span>
 <span class="kd">local</span><span class="w"> </span><span class="nv">____M</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">MyClass</span><span class="w">                </span><span class="c1">-- 模块变量声明</span>
 <span class="c1">-- ...成员绑定...</span>
@@ -141,7 +178,7 @@
 </ul>
 <h3 id="identifier">特殊标识符（identifier）</h3>
 <p>核心：<code>__FUNC__</code> 魔术常量</p>
-<div class="codehilite"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">node</span><span class="p">.</span><span class="nx">text</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">&quot;__FUNC__&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">node</span><span class="p">.</span><span class="nx">text</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">&quot;__FUNC__&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// 自动替换为当前函数名（&quot;类名.方法名&quot; 格式）</span>
 <span class="w">    </span><span class="nx">functionName</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sb">`</span><span class="si">${</span><span class="nx">className</span><span class="si">}</span><span class="sb">.</span><span class="si">${</span><span class="nx">methodName</span><span class="si">}</span><span class="sb">`</span><span class="p">;</span>
 <span class="p">}</span>
@@ -163,7 +200,7 @@
 <p>用 <code>luaparse</code> 解析 Lua AST，定位 <code>luaMInitFunc = function(...)</code> 赋值语句，只保留函数体内部内容，剥离外层变量赋值包裹。</p>
 <h3 id="return">类模块追加 return</h3>
 <p>通过匹配 <code>Xxx.name = "..."</code> 提取类名，文件末尾追加 <code>return ____M</code>。</p>
-<div class="codehilite"><pre><span></span><code class="language-lua"><span class="kd">let</span><span class="w"> </span><span class="nx">match</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">emitFile</span><span class="p">.</span><span class="nx">code</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="sr">/(\w+)\.name\s*=\s*&quot;/</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="kd">let</span><span class="w"> </span><span class="nx">match</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">emitFile</span><span class="p">.</span><span class="nx">code</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="sr">/(\w+)\.name\s*=\s*&quot;/</span><span class="p">);</span>
 <span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">match</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nx">emitFile</span><span class="p">.</span><span class="nx">code</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">emitFile</span><span class="p">.</span><span class="nx">code</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;\nreturn ____M\n&#39;</span><span class="p">;</span>
 <span class="p">}</span>
@@ -178,7 +215,7 @@
 </ul>
 <h2 id="printerts-lua">printer.ts — 自定义 Lua 打印机</h2>
 <p>继承 <code>LuaPrinter</code>，重写 <code>printFile</code> 在文件头添加注释。</p>
-<div class="codehilite"><pre><span></span><code><span class="kd">class</span><span class="w"> </span><span class="nx">CustomPrinter</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nx">tstl</span><span class="p">.</span><span class="nx">LuaPrinter</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="kd">class</span><span class="w"> </span><span class="nx">CustomPrinter</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nx">tstl</span><span class="p">.</span><span class="nx">LuaPrinter</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="k">protected</span><span class="w"> </span><span class="nx">printFile</span><span class="p">(</span><span class="nx">file</span><span class="o">:</span><span class="w"> </span><span class="kt">tstl.File</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nx">SourceNode</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="kd">const</span><span class="w"> </span><span class="nx">originalResult</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">super</span><span class="p">.</span><span class="nx">printFile</span><span class="p">(</span><span class="nx">file</span><span class="p">);</span>
 <span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">createSourceNode</span><span class="p">(</span><span class="nx">file</span><span class="p">,</span><span class="w"> </span><span class="p">[</span>
@@ -193,7 +230,7 @@
 <p>在 Lua 代码生成完成后触发，记录输出文件信息，打印 TS 原始文件路径和输出文件路径。</p>
 <h2 id="moduleresolutionts">模块解析（moduleResolution.ts）</h2>
 <p>简单的模块重定向示例，将特定模块名映射到不同文件。</p>
-<div class="codehilite"><pre><span></span><code class="language-typescript"><span class="kr">module</span><span class="nx">Resolution</span><span class="p">(</span><span class="kr">module</span><span class="nx">Identifier</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="kr">module</span><span class="nx">Resolution</span><span class="p">(</span><span class="kr">module</span><span class="nx">Identifier</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="kr">module</span><span class="nx">Identifier</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">&quot;foo&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="s2">&quot;bar&quot;</span><span class="p">;</span>
 <span class="w">    </span><span class="p">}</span>
@@ -201,7 +238,7 @@
 </code></pre></div>
 
 <h2 id="_4">编译流水线总结</h2>
-<div class="codehilite"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
 <span class="err">│</span><span class="w">                        </span><span class="n">TSTL</span><span class="w"> </span><span class="err">编译流水线</span><span class="w">                           </span><span class="err">│</span>
 <span class="err">├─────────────────────────────────────────────────────────────────┤</span>
 <span class="err">│</span><span class="w">  </span><span class="n">Phase</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span><span class="w"> </span><span class="err">元数据准备</span><span class="w">                                              </span><span class="err">│</span>
@@ -228,15 +265,54 @@
 <span class="err">│</span><span class="w">    </span><span class="err">→</span><span class="w"> </span><span class="n">afterEmit</span><span class="o">.</span><span class="n">ts</span><span class="p">:</span><span class="w"> </span><span class="err">记录日志，打印原始文件和输出文件路径</span><span class="w">              </span><span class="err">│</span>
 <span class="err">└─────────────────────────────────────────────────────────────────┘</span>
 </code></pre></div></div>
-  <p><a href="/">← 返回首页</a></p>
-</article>
-</main>
+    
+    <div class="post-tags">
+      
+      <a href="/tags/TSTL.html" class="tag-inline">TSTL</a>
+      
+      <a href="/tags/TypeScript.html" class="tag-inline">TypeScript</a>
+      
+      <a href="/tags/Lua.html" class="tag-inline">Lua</a>
+      
+      <a href="/tags/%E6%9E%B6%E6%9E%84.html" class="tag-inline">架构</a>
+      
+    </div>
+    
+    
 
+    
+    <section style="max-width:800px; margin:32px auto; padding:0 24px;">
+      <h3 style="border-top:1px solid var(--border-color); padding-top:24px;">评论</h3>
+      <script src="https://giscus.app/client.js"
+              data-repo="691407323/691407323.github.io"
+              data-repo-id="R_kgDOSqX-lw"
+              data-category="Announcements"
+              data-category-id="DIC_kwDOSqX-l84DAdPg"
+              data-mapping="pathname"
+              data-strict="0"
+              data-reactions-enabled="1"
+              data-emit-metadata="0"
+              data-input-position="bottom"
+              data-theme="preferred_color_scheme"
+              data-lang="zh-CN"
+              crossorigin="anonymous"
+              async>
+      </script>
+    </section>
+    
+
+    <p><a href="/">← 返回首页</a></p>
+  </article>
+  </main>
+  
   </div>
+  
+  
+<footer class="container">
+  <p class="footer-text">Copyright &copy; 2021-2026 胤源 Blog Powered by issues-blog.</p>
+</footer>
+<script src="/static/js/code-copy.js"></script>
+<script src="/static/js/theme.js"></script>
 
-
-  <footer class="container">
-    <p style="text-align:center;">Copyright © 2021-2026 胤源 Blog Powered by issues-blog.</p>
-  </footer>
 </body>
 </html>

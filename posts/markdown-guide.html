@@ -3,20 +3,57 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>胤源 Blog</title>
+  <title>Markdown 语法指南 · 胤源 Blog</title>
+  <meta name="description" content="极简静态博客，Markdown 写作，Python 构建">
+  <meta name="author" content="胤源">
+  <link rel="canonical" href="https://691407323.github.io/posts/markdown-guide.html">
+  <link rel="alternate" type="application/atom+xml" title="胤源 Blog" href="/feed.xml">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Markdown 语法指南">
+  <meta property="og:description" content="极简静态博客，Markdown 写作，Python 构建">
+  <meta property="og:url" content="https://691407323.github.io/posts/markdown-guide.html">
+  
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/static/css/style.css">
+<!-- M-08: KaTeX CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script defer>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof renderMathInElement === 'function') {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '\('', right: '\)', display: false},
+          {left: '\[', right: '\]', display: true}
+        ],
+        throwOnError: false
+      });
+    }
+  });
+</script>
+<!-- M-09: Mermaid CDN -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'default', securityLevel:'loose'});</script>
 </head>
 <body>
-  <header>
-    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center; padding-left: 60px; padding-right: 60px;">
-      <div style="position:absolute; left:0; display:flex; gap:8px; align-items:center;">
-        <a href="/" style="text-decoration:none; padding:8px 12px;">首页</a>
-        <a href="/about.html" style="text-decoration:none; padding:8px 12px; color:#666;">关于</a>
-      </div>
-      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">胤源 Blog</a></h1>
+<header>
+  <div class="header-inner container">
+    <div class="nav-left">
+      <a href="/" class="nav-link">首页</a>
+      <a href="/about.html" class="nav-link">关于</a>
+      <span class="nav-divider"></span>
+      <a href="/tags.html" class="nav-link">标签</a>
+      <a href="/archive.html" class="nav-link">归档</a>
+      <span class="nav-divider"></span>
+      <a href="/search.html" class="nav-link">?</a>
+      <button id="theme-toggle" class="nav-link">🌙</button>
     </div>
-  </header>
-  
+    <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">胤源 Blog</a></h1>
+  </div>
+</header>
+
 
 <div class="toc-layout">
   <nav class="toc-sidebar">
@@ -46,11 +83,11 @@
 
   </nav>
   <main class="toc-main">
-
-<article class="post">
-  <h2>Markdown 语法指南</h2>
-  <p class="post-meta">2026-05-29</p>
-  <div class="post-body"><p>这是一篇全面展示 Markdown 语法的示例文章，帮助你快速上手写作。</p>
+  
+  <article class="post">
+    <h2>Markdown 语法指南</h2>
+    <p class="post-meta">2026-05-29 · 阅读 1 分钟</p>
+    <div class="post-body"><p>这是一篇全面展示 Markdown 语法的示例文章，帮助你快速上手写作。</p>
 <h2 id="_1">文本样式</h2>
 <p><strong>粗体文字</strong>、<em>斜体文字</em>、~~删除线~~、<code>行内代码</code>。</p>
 <p>也可以组合：<strong><em>粗体加斜体</em></strong>，<strong>粗体中的 <code>代码</code></strong>。</p>
@@ -120,7 +157,7 @@
 <hr />
 <p>分隔线下方的内容。</p>
 <h2 id="_13">脚注</h2>
-<p>这是一段带脚注的文字<a href="这是脚注的内容，可以写很长的说明。">^1</a>。脚注会自动渲染到页面底部。</p>
+<p>这是一段带脚注的文字<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>。脚注会自动渲染到页面底部。</p>
 <h2 id="html">HTML 内嵌</h2>
 <p>Markdown 支持直接嵌入 HTML：</p>
 <details>
@@ -134,16 +171,59 @@
 </details>
 
 <h2 id="_14">总结</h2>
-<p>以上涵盖了 Markdown 的主要语法特性。你可以参考这篇文章的源文件 <code>content/posts/markdown-guide.md</code> 来学习写法。</p></div>
-  <p><a href="/">← 返回首页</a></p>
-</article>
-</main>
+<p>以上涵盖了 Markdown 的主要语法特性。你可以参考这篇文章的源文件 <code>content/posts/markdown-guide.md</code> 来学习写法。</p>
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:1">
+<p>这是脚注的内容，可以写很长的说明。&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div></div>
+    
+    <div class="post-tags">
+      
+      <a href="/tags/Markdown.html" class="tag-inline">Markdown</a>
+      
+      <a href="/tags/%E5%86%99%E4%BD%9C.html" class="tag-inline">写作</a>
+      
+    </div>
+    
+    
 
+    
+    <section style="max-width:800px; margin:32px auto; padding:0 24px;">
+      <h3 style="border-top:1px solid var(--border-color); padding-top:24px;">评论</h3>
+      <script src="https://giscus.app/client.js"
+              data-repo="691407323/691407323.github.io"
+              data-repo-id="R_kgDOSqX-lw"
+              data-category="Announcements"
+              data-category-id="DIC_kwDOSqX-l84DAdPg"
+              data-mapping="pathname"
+              data-strict="0"
+              data-reactions-enabled="1"
+              data-emit-metadata="0"
+              data-input-position="bottom"
+              data-theme="preferred_color_scheme"
+              data-lang="zh-CN"
+              crossorigin="anonymous"
+              async>
+      </script>
+    </section>
+    
+
+    <p><a href="/">← 返回首页</a></p>
+  </article>
+  </main>
+  
   </div>
+  
+  
+<footer class="container">
+  <p class="footer-text">Copyright &copy; 2021-2026 胤源 Blog Powered by issues-blog.</p>
+</footer>
+<script src="/static/js/code-copy.js"></script>
+<script src="/static/js/theme.js"></script>
 
-
-  <footer class="container">
-    <p style="text-align:center;">Copyright © 2021-2026 胤源 Blog Powered by issues-blog.</p>
-  </footer>
 </body>
 </html>

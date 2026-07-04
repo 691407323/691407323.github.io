@@ -3,20 +3,57 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>胤源 Blog</title>
+  <title>Skynet-cmake 跨平台使用 · 胤源 Blog</title>
+  <meta name="description" content="极简静态博客，Markdown 写作，Python 构建">
+  <meta name="author" content="胤源">
+  <link rel="canonical" href="https://691407323.github.io/posts/skynet-cmake-usage.html">
+  <link rel="alternate" type="application/atom+xml" title="胤源 Blog" href="/feed.xml">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Skynet-cmake 跨平台使用">
+  <meta property="og:description" content="极简静态博客，Markdown 写作，Python 构建">
+  <meta property="og:url" content="https://691407323.github.io/posts/skynet-cmake-usage.html">
+  
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/static/css/style.css">
+<!-- M-08: KaTeX CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script defer>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof renderMathInElement === 'function') {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '\('', right: '\)', display: false},
+          {left: '\[', right: '\]', display: true}
+        ],
+        throwOnError: false
+      });
+    }
+  });
+</script>
+<!-- M-09: Mermaid CDN -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'default', securityLevel:'loose'});</script>
 </head>
 <body>
-  <header>
-    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center; padding-left: 60px; padding-right: 60px;">
-      <div style="position:absolute; left:0; display:flex; gap:8px; align-items:center;">
-        <a href="/" style="text-decoration:none; padding:8px 12px;">首页</a>
-        <a href="/about.html" style="text-decoration:none; padding:8px 12px; color:#666;">关于</a>
-      </div>
-      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">胤源 Blog</a></h1>
+<header>
+  <div class="header-inner container">
+    <div class="nav-left">
+      <a href="/" class="nav-link">首页</a>
+      <a href="/about.html" class="nav-link">关于</a>
+      <span class="nav-divider"></span>
+      <a href="/tags.html" class="nav-link">标签</a>
+      <a href="/archive.html" class="nav-link">归档</a>
+      <span class="nav-divider"></span>
+      <a href="/search.html" class="nav-link">?</a>
+      <button id="theme-toggle" class="nav-link">🌙</button>
     </div>
-  </header>
-  
+    <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">胤源 Blog</a></h1>
+  </div>
+</header>
+
 
 <div class="toc-layout">
   <nav class="toc-sidebar">
@@ -39,11 +76,11 @@
 
   </nav>
   <main class="toc-main">
-
-<article class="post">
-  <h2>Skynet-cmake 跨平台使用</h2>
-  <p class="post-meta">2026-06-03</p>
-  <div class="post-body"><h2 id="_1">简介</h2>
+  
+  <article class="post">
+    <h2>Skynet-cmake 跨平台使用</h2>
+    <p class="post-meta">2026-06-03 · 阅读 2 分钟</p>
+    <div class="post-body"><h2 id="_1">简介</h2>
 <p>基于 <a href="https://github.com/hanxi/skynet-cmake">hanxi/skynet-cmake</a> 项目，新增 skynet 框架的使用，并做了以下调整和 bug 修复。同时引入 TSTL（TypeScriptToLua）来替代传统 Lua 脚本编写方式。</p>
 <h2 id="_2">项目层级</h2>
 <p>项目目录结构调整如下：</p>
@@ -74,7 +111,7 @@ CMakeLists.txt
 <p>调用方式需要区分平台，避免参数顺序导致的编译或运行时错误。</p>
 <h3 id="2-windows-socket">2. 修复 Windows 下 socket 断开问题</h3>
 <p>Windows 下 <code>read</code> 函数在 socket 非阻塞模式下遇到 <code>WSAEWOULDBLOCK</code> 时会被当作异常断开。修复方案：</p>
-<div class="codehilite"><pre><span></span><code class="language-c"><span class="kt">int</span><span class="w"> </span><span class="n">wsaerr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WSAGetLastError</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">wsaerr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WSAGetLastError</span><span class="p">();</span>
 <span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">wsaerr</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">WSAEWOULDBLOCK</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="n">errno</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">EWOULDBLOCK</span><span class="p">;</span>
 <span class="p">}</span>
@@ -90,7 +127,7 @@ CMakeLists.txt
 <li>后台线程通过 <code>fgets</code> 阻塞读取 stdin，就绪后通知主线程</li>
 <li>提供三个 Lua 接口：初始化线程、获取输入结果、关闭线程</li>
 </ul>
-<div class="codehilite"><pre><span></span><code><span class="k">static</span><span class="w"> </span><span class="n">DWORD</span><span class="w"> </span><span class="n">WINAPI</span><span class="w"> </span><span class="n">readInput</span><span class="p">(</span><span class="n">LPVOID</span><span class="w"> </span><span class="n">lpParam</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="k">static</span><span class="w"> </span><span class="n">DWORD</span><span class="w"> </span><span class="n">WINAPI</span><span class="w"> </span><span class="n">readInput</span><span class="p">(</span><span class="n">LPVOID</span><span class="w"> </span><span class="n">lpParam</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="k">while</span><span class="p">(</span><span class="o">!</span><span class="n">input_end</span><span class="p">){</span>
 <span class="w">        </span><span class="n">fgets</span><span class="p">(</span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">input</span><span class="p">),</span><span class="w"> </span><span class="n">stdin</span><span class="p">);</span><span class="w">  </span><span class="c1">// 阻塞读取输入</span>
 <span class="w">        </span><span class="n">input_ready</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TRUE</span><span class="p">;</span><span class="w">                  </span><span class="c1">// 标记输入已准备好</span>
@@ -106,7 +143,7 @@ CMakeLists.txt
 | <code>getWinThreadResultFlag()</code> | 获取用户输入字符串，无输入返回 nil |
 | <code>closeWinThread()</code> | 关闭线程并等待退出 |</p>
 <h4 id="_5">完整源码</h4>
-<div class="codehilite"><pre><span></span><code class="language-c"><span class="c1">//</span>
+<div class="highlight"><pre><span></span><code><span class="c1">//</span>
 <span class="c1">// Created by Vermouth on 2024/1/24.</span>
 <span class="c1">//</span>
 
@@ -176,15 +213,52 @@ CMakeLists.txt
 <span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div></div>
-  <p><a href="/">← 返回首页</a></p>
-</article>
-</main>
+    
+    <div class="post-tags">
+      
+      <a href="/tags/Skynet.html" class="tag-inline">Skynet</a>
+      
+      <a href="/tags/CMake.html" class="tag-inline">CMake</a>
+      
+      <a href="/tags/TSTL.html" class="tag-inline">TSTL</a>
+      
+    </div>
+    
+    
 
+    
+    <section style="max-width:800px; margin:32px auto; padding:0 24px;">
+      <h3 style="border-top:1px solid var(--border-color); padding-top:24px;">评论</h3>
+      <script src="https://giscus.app/client.js"
+              data-repo="691407323/691407323.github.io"
+              data-repo-id="R_kgDOSqX-lw"
+              data-category="Announcements"
+              data-category-id="DIC_kwDOSqX-l84DAdPg"
+              data-mapping="pathname"
+              data-strict="0"
+              data-reactions-enabled="1"
+              data-emit-metadata="0"
+              data-input-position="bottom"
+              data-theme="preferred_color_scheme"
+              data-lang="zh-CN"
+              crossorigin="anonymous"
+              async>
+      </script>
+    </section>
+    
+
+    <p><a href="/">← 返回首页</a></p>
+  </article>
+  </main>
+  
   </div>
+  
+  
+<footer class="container">
+  <p class="footer-text">Copyright &copy; 2021-2026 胤源 Blog Powered by issues-blog.</p>
+</footer>
+<script src="/static/js/code-copy.js"></script>
+<script src="/static/js/theme.js"></script>
 
-
-  <footer class="container">
-    <p style="text-align:center;">Copyright © 2021-2026 胤源 Blog Powered by issues-blog.</p>
-  </footer>
 </body>
 </html>
