@@ -3,7 +3,7 @@
   <title>胤源 Blog</title>
   <link href="https://691407323.github.io/feed.xml" rel="self"/>
   <link href="https://691407323.github.io/"/>
-  <updated>2026-07-04T03:08:56Z</updated>
+  <updated>2026-07-04T03:50:24Z</updated>
   <author><name>胤源 Blog</name></author>
   <id>https://691407323.github.io/</id>
   
@@ -104,12 +104,13 @@ M-14 的设计是<strong>条件输出</strong>：没有 <code>cover</code> 的�
   
   <entry>
     <title>Skynet-cmake 跨平台使用</title>
-    <summary>Skynet-cmake 跨平台使用</summary>
+    <summary>基于 hanxi/skynet-cmake 的跨平台构建方案，skynet 以 submodule 方式接入，并引入 TSTL 替代传统 Lua 脚本。</summary>
     <link href="https://691407323.github.io/posts/skynet-cmake-usage.html"/>
     <id>https://691407323.github.io/posts/skynet-cmake-usage.html</id>
     <updated>2026-06-03T00:00:00Z</updated>
     <content type="html"><h2 id="_1">简介</h2>
-<p>基于 <a href="https://github.com/hanxi/skynet-cmake">hanxi/skynet-cmake</a> 项目，新增 skynet 框架的使用，并做了以下调整和 bug 修复。同时引入 TSTL（TypeScriptToLua）来替代传统 Lua 脚本编写方式。</p>
+<p>本篇基于 <a href="https://github.com/hanxi/skynet-cmake">hanxi/skynet-cmake</a> 项目。skynet 以 submodule 的方式链接，方便升级且保持不可改原则。开发环境为 Visual Studio 2022，需安装 CMake 与 Clang 组件。在此基础上做了若干跨平台调整，同时引入 TSTL（TypeScriptToLua）来替代传统 Lua 脚本编写方式。</p>
+<p>项目地址：<a href="https://github.com/691407323/skynet-cmake.git">skynet-cmake</a></p>
 <h2 id="_2">项目层级</h2>
 <p>项目目录结构调整如下：</p>
 <pre id="folder-tree">
@@ -129,15 +130,15 @@ buildWin/
 CMakeLists.txt
 </pre>
 
-<h2 id="skynet-cmake-win-bug">Skynet-cmake-win Bug 记录</h2>
-<h3 id="1-unistdh-log">1. 修复 <code>unistd.h</code> 启动 log 调用</h3>
+<h2 id="skynet-cmake-win">Skynet-cmake-win 修改记录</h2>
+<h3 id="1-unistdh-log">1. 修改 <code>unistd.h</code> 启动 log 调用</h3>
 <p>时间转换函数在 Windows 和 Linux 上表现不一致：</p>
 <ul>
-<li><strong>Windows</strong>: <code>_localtime64(struct tm, time_t)</code></li>
-<li><strong>Linux</strong>: <code>localtime_r(time_t, struct tm)</code></li>
+<li><strong>Windows</strong>：<code>_localtime64(struct tm, time_t)</code></li>
+<li><strong>Linux</strong>：<code>localtime_r(time_t, struct tm)</code></li>
 </ul>
 <p>调用方式需要区分平台，避免参数顺序导致的编译或运行时错误。</p>
-<h3 id="2-windows-socket">2. 修复 Windows 下 socket 断开问题</h3>
+<h3 id="2-windows-socket">2. 修改 Windows 下 socket 断开问题</h3>
 <p>Windows 下 <code>read</code> 函数在 socket 非阻塞模式下遇到 <code>WSAEWOULDBLOCK</code> 时会被当作异常断开。修复方案：</p>
 <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">wsaerr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WSAGetLastError</span><span class="p">();</span>
 <span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">wsaerr</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">WSAEWOULDBLOCK</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
@@ -165,11 +166,17 @@ CMakeLists.txt
 </code></pre></div>
 
 <h4 id="lua">Lua 接口</h4>
-<p>| 函数 | 说明 |
-|------|------|
-| <code>initWinThread()</code> | 启动后台输入线程 |
-| <code>getWinThreadResultFlag()</code> | 获取用户输入字符串，无输入返回 nil |
-| <code>closeWinThread()</code> | 关闭线程并等待退出 |</p>
+<table>
+<thead>
+<tr><th>函数</th><th>说明</th></tr>
+</thead>
+<tbody>
+<tr><td><code>initWinThread()</code></td><td>启动后台输入线程</td></tr>
+<tr><td><code>getWinThreadResultFlag()</code></td><td>获取用户输入字符串，无输入返回 <code>nil</code></td></tr>
+<tr><td><code>closeWinThread()</code></td><td>关闭线程并等待退出</td></tr>
+</tbody>
+</table>
+
 <h4 id="_5">完整源码</h4>
 <div class="highlight"><pre><span></span><code><span class="c1">//</span>
 <span class="c1">// Created by Vermouth on 2024/1/24.</span>
