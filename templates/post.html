@@ -7,17 +7,71 @@
     {{ toc | safe }}
   </nav>
   <main class="toc-main">
-{% else %}
-<main class="container">
-{% endif %}
-<article class="post">
-  <h2>{{ post.title }}</h2>
-  <p class="post-meta">{{ post.date }}</p>
-  <div class="post-body">{{ content | safe }}</div>
-  <p><a href="/">← 返回首页</a></p>
-</article>
-</main>
-{% if toc %}
+  {% else %}
+  <main class="container">
+  {% endif %}
+  <article class="post">
+    <h2>{{ post.title }}</h2>
+    <p class="post-meta">{{ post.date }} · 阅读 {{ read_time }}{% if post.updated %} · 更新于 {{ post.updated }}{% endif %}</p>
+    <div class="post-body">{{ content | safe }}</div>
+    {% if tags_list %}
+    <div class="post-tags">
+      {% for tag in tags_list %}
+      <a href="/tags/{{ all_tag_url_map.get(tag, tag) }}.html" class="tag-inline">{{ tag }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if series_nav %}
+    <div class="series-nav">
+      {% if series_nav.prev %}
+      <div style="font-size:0.9rem; margin-bottom:12px; color:var(--text-secondary);">
+        ← 上一篇：<a href="/posts/{{ series_nav.prev.slug }}.html" style="color:var(--text-primary);">{{ series_nav.prev.title }}</a>
+      </div>
+      {% endif %}
+      <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:8px;">
+        系列：{{ series_nav.name }}
+      </div>
+      {% for sp in series_nav.list %}
+      <a href="/posts/{{ sp.slug }}.html" class="series-item"
+         style="display:block; padding:4px 0;
+                color:{% if sp.slug == post.slug %}var(--text-primary); font-weight:bold;{% else %}var(--text-secondary);{% endif %}
+                text-decoration:none;">
+        {{ sp.series_order }}. {{ sp.title }}{% if sp.slug == post.slug %} ← 当前{% endif %}
+      </a>
+      {% endfor %}
+      {% if series_nav.next %}
+      <div style="font-size:0.9rem; margin-top:12px; color:var(--text-secondary);">
+        下一篇：<a href="/posts/{{ series_nav.next.slug }}.html" style="color:var(--text-primary);">{{ series_nav.next.title }} →</a>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if giscus_repo %}
+    <section style="max-width:800px; margin:32px auto; padding:0 24px;">
+      <h3 style="border-top:1px solid var(--border-color); padding-top:24px;">评论</h3>
+      <script src="https://giscus.app/client.js"
+              data-repo="{{ giscus_repo }}"
+              data-repo-id="{{ giscus_repo_id }}"
+              data-category="{{ giscus_category }}"
+              data-category-id="{{ giscus_category_id }}"
+              data-mapping="pathname"
+              data-strict="0"
+              data-reactions-enabled="1"
+              data-emit-metadata="0"
+              data-input-position="bottom"
+              data-theme="preferred_color_scheme"
+              data-lang="zh-CN"
+              crossorigin="anonymous"
+              async>
+      </script>
+    </section>
+    {% endif %}
+
+    <p><a href="/">← 返回首页</a></p>
+  </article>
+  </main>
+  {% if toc %}
   </div>
-{% endif %}
-{% endblock %}
+  {% endif %}
+  {% endblock %}

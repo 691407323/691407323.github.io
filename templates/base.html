@@ -3,22 +3,62 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>{{ title or site_title or 'My Blog' }}</title>
+  <title>{{ title }}</title>
+  <meta name="description" content="{{ description or site_description }}">
+  <meta name="author" content="{{ site_author }}">
+  <link rel="canonical" href="{{ canonical_url }}">
+  <link rel="alternate" type="application/atom+xml" title="{{ site_title }}" href="/feed.xml">
+  <meta property="og:type" content="{{ og_type or 'website' }}">
+  <meta property="og:title" content="{{ og_title or title or site_title }}">
+  <meta property="og:description" content="{{ og_description or description or site_description }}">
+  <meta property="og:url" content="{{ canonical_url }}">
+  {% if og_image %}<meta property="og:image" content="{{ og_image }}">{% endif %}
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/static/css/style.css">
+<!-- M-08: KaTeX CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script defer>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof renderMathInElement === 'function') {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '\('', right: '\)', display: false},
+          {left: '\[', right: '\]', display: true}
+        ],
+        throwOnError: false
+      });
+    }
+  });
+</script>
+<!-- M-09: Mermaid CDN -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'default', securityLevel:'loose'});</script>
 </head>
 <body>
-  <header>
-    <div class="container" style="position:relative; display:flex; justify-content:center; align-items:center; padding-left: 60px; padding-right: 60px;">
-      <div style="position:absolute; left:0; display:flex; gap:8px; align-items:center;">
-        <a href="/" style="text-decoration:none; padding:8px 12px;">首页</a>
-        <a href="/about.html" style="text-decoration:none; padding:8px 12px; color:#666;">关于</a>
-      </div>
-      <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">{{ site_title or '胤源 Blog' }}</a></h1>
+<header>
+  <div class="header-inner container">
+    <div class="nav-left">
+      <a href="/" class="nav-link">首页</a>
+      <a href="/about.html" class="nav-link">关于</a>
+      <span class="nav-divider"></span>
+      <a href="/tags.html" class="nav-link">标签</a>
+      <a href="/archive.html" class="nav-link">归档</a>
+      <span class="nav-divider"></span>
+      <a href="/search.html" class="nav-link">?</a>
+      <button id="theme-toggle" class="nav-link">🌙</button>
     </div>
-  </header>
-  {% block content %}{% endblock %}
-  <footer class="container">
-    <p style="text-align:center;">Copyright © {{ start_year }}-{{ current_year }} {{ site_title }} Powered by issues-blog.</p>
-  </footer>
+    <h1 style="margin:0;"><a href="/" style="text-decoration:none; color:inherit;">{{ site_title or '胤源 Blog' }}</a></h1>
+  </div>
+</header>
+{% block content %}{% endblock %}
+<footer class="container">
+  <p class="footer-text">Copyright &copy; {{ start_year }}-{{ current_year }} {{ site_title }} Powered by issues-blog.</p>
+</footer>
+<script src="/static/js/code-copy.js"></script>
+<script src="/static/js/theme.js"></script>
+{% block extra_scripts %}{% endblock %}
 </body>
 </html>

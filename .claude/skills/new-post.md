@@ -7,6 +7,27 @@ description: 将用户输入的文字或文件内容生成为符合博客格式�
 
 直接对 Claude 说"生成一篇博客文章"、"把这段内容写成博客"或直接粘贴文件路径，无需使用任何斜杠命令。
 
+## 站点能力速览（写文章时据此选用语法）
+
+| 能力 | 是否支持 | 写法 | 说明 |
+|------|---------|------|------|
+| 代码块 + 语法高亮 | ✅ | ` ```python ` … ` ``` ` | 自动高亮，`<code class="language-xxx">` |
+| 代码行号 | ✅ | front matter 加 `linenums: true` | 逐篇控制 |
+| 目录 TOC | ✅ | 自动按标题生成 | 深度 3 级 |
+| 脚注 | ✅ | `[^1]` + `[^1]: 内容` | 渲染到页面底部 |
+| 数学公式（KaTeX） | ✅ | 块级 `$$...$$` / 行内 `\(...\)` | **不用** `$...$`（与文本冲突） |
+| Mermaid 图表 | ✅ | ` ```mermaid ` … ` ``` ` | 流程图/架构图 |
+| HTML 内嵌 | ✅ | `<details>`、`<kbd>`、`<a>` 等 | 原生标签可直接写 |
+| 图片 | ✅ | `![alt](/static/images/x.webp)` | **绝对路径**，自动转 WebP |
+| 标签 tags | ✅ | front matter `tags: [a, b]` | 支持数组或逗号字符串 |
+| 封面 og:image | ✅ | front matter `cover: static/images/x.png` | 不带前导斜杠 |
+| 系列导航 | ✅ | front matter `series` + `series_order` | 上一篇/下一篇 |
+| 删除线 `~~` | ❌ | — | 未启用 `pymdownx.tilde`，改用 HTML `<s>` |
+| 任务列表 `- [ ]` | ❌ | — | 未启用 `pymdownx.tasklist`，改用 HTML `<input type=checkbox>` |
+| Markdown 表格 `\|` | ❌ | — | 未启用 `tables` 扩展，改用 HTML `<table>` |
+
+> **图片处理**：构建时 `static/images/` 里的 PNG/JPG 会自动生成同名 `.webp`（限宽 1600px）+ `_thumb.webp` 缩略图。文中建议引用已生成的 `.webp` 省体积，原始 PNG 也保留可用。
+
 ## 处理流程
 
 1. **接收输入**：用户提供文字内容、文件路径（单个或多个），或两者混合
@@ -39,13 +60,36 @@ description: 将用户输入的文字或文件内容生成为符合博客格式�
    - 英文/数字：小写，空格替换为连字符，去除特殊字符（仅保留字母、数字、连字符）
    - 若目标文件已存在，追加编号：`slug.md` → `slug-2.md` → `slug-3.md`
 7. **处理 front matter**：
-   - 若原文已有 front matter（`---` 包裹的元数据），保留原文中的 `title`/`date`/`slug` 以外的字段（如 tags、description、categories）
-   - 覆盖或补充 `title`、`date`、`slug` 三个字段
+   - 若原文已有 front matter（`---` 包裹的元数据），保留原文中的字段，仅覆盖 `title`/`date`/`slug`
    - 若原文无 front matter，按标准格式生成
+   - **可选字段**（按需补充，参见下表，不要硬塞不相关字段）：
+     - `tags: [标签1, 标签2]` — 数组或逗号字符串
+     - `description: 一句话摘要` — 用于 RSS summary、SEO description
+     - `draft: true` — 草稿，跳过构建（不计入标签/归档/RSS）
+     - `linenums: true` — 该篇代码块显示行号
+     - `cover: static/images/xxx.png` — 封面图（**不带前导斜杠**），生成 og:image
+     - `updated: 2026-07-04` — 最后修改日期，文章页显示"更新于"，RSS 优先使用
+     - `series: 系列名` + `series_order: 2` — 系列导航（按 series_order 升序排列）
 8. **保存文件**：写入 `content/posts/<slug>.md`
 9. **通知用户**：报告生成的文件路径、标题和日期来源
 
-> **提示**：`build.py` 会自动扫描 `content/posts/` 目录下的所有 `.md` 文件，新文章无需手动注册，构建时自动包含。
+> **提示**：`build.py` 会自动扫描 `content/posts/` 目录下的所有 `.md` 文件，新文章无需手动注册，构建时自动包含。`slug` 不可重复，重复构建会报错。
+
+## Front Matter 字段表
+
+| 字段 | 必填 | 类型 | 说明 |
+|------|------|------|------|
+| `title` | 否 | 字符串 | 文章标题，默认取文件名 |
+| `date` | 否 | 日期(YYYY-MM-DD) | 发布日期，用于排序降序 |
+| `slug` | 否 | 字符串 | URL 标识，默认取文件名，**不可重复** |
+| `tags` | 否 | 数组/逗号字符串 | 文章标签 |
+| `description` | 否 | 字符串 | 摘要（RSS/SEO） |
+| `draft` | 否 | 布尔 | `true` 跳过构建 |
+| `linenums` | 否 | 布尔 | 该篇代码块显示行号 |
+| `cover` | 否 | 字符串 | 封面图路径（不带前导斜杠），生成 og:image |
+| `updated` | 否 | 日期 | 最后修改日期 |
+| `series` | 否 | 字符串 | 系列名 |
+| `series_order` | 否 | 数字 | 系列内序号 |
 
 ## 多文件处理
 
@@ -56,9 +100,17 @@ description: 将用户输入的文字或文件内容生成为符合博客格式�
 ## 格式要求
 
 - Front matter 必须包含 `title`、`date`、`slug`
-- 保留原文 front matter 中的自定义字段（tags、description、categories 等）
+- 保留原文 front matter 中的自定义字段（tags、description、series 等）
 - 正文保持原文结构和格式，不做内容删减
-- 支持代码块、表格、引用等 Markdown 语法
+- 支持代码块、引用、脚注、公式、Mermaid 等 Markdown 语法
+- 图片用绝对路径 `/static/images/xxx.webp`（或 `.png`）
+
+## 图片处理
+
+1. 把图片放进 `static/images/`（构建时自动生成 `.webp` + `_thumb.webp`）
+2. 正文用绝对路径引用：`![alt](/static/images/xxx.webp)`
+3. 封面图用 front matter `cover: static/images/xxx.png`（不带前导斜杠，会拼成绝对 URL 生成 og:image）
+4. 自适应已内置：`.post-body img { max-width:100% }`，无需手控宽度
 
 ## 错误处理
 
@@ -92,7 +144,7 @@ core/
 ├── skynet/
 ├── posix/
 └── pthread-win32/
-cservice_src/
+cservice-src/
 <a href="#1-lua-winhelp-windows" style="color:#4fc3f7;">[→ lua-winhelp]</a>
 ts/
 ├── src/
@@ -147,6 +199,7 @@ ts/
 - 所有跳转链接使用统一的浅蓝色 `#4fc3f7`，在深色代码背景下清晰可见
 - 标题行如有自引用需求，使用显式 `<a id="slug"></a>` 放在标题前，而非包裹标题文字
 - 返回链接默认内联放置（不加 `float:right`），仅当需要视觉分离时才使用 `float:right`
+- 目录树里的目录名随项目演进可能变化（如 `cservice_src` → `cservice-src`），生成时参照实际仓库结构
 
 ## 示例
 
@@ -161,6 +214,8 @@ ts/
 title: TSTL 转 Lua 工具介绍
 date: 2026-06-03
 slug: tstl-to-lua-about
+tags: [TSTL, TypeScript, Lua]
+description: TypeScriptToLua 将 TypeScript 转译为 Lua 的工具介绍。
 ---
 
 TypeScriptToLua 是一个将 TS 转 Lua 的工具...
@@ -193,9 +248,38 @@ slug: tstl-docs
 ```markdown
 ---
 title: notes
-date: 2026-06-03
+date: 2026-07-04
 slug: notes
 ---
 
 <文件原文内容，日期使用当天日期>
+```
+
+**输入（带公式 + 图表 + 封面）：**
+```markdown
+把这段生成博客，里面有状态机图和贝叶斯公式
+```
+
+**输出文件 `content/posts/bayes-intro.md`：**
+```markdown
+---
+title: 贝叶斯公式入门
+date: 2026-07-04
+slug: bayes-intro
+tags: [概率论, 数学]
+cover: static/images/bayes.png
+---
+
+## 状态机
+
+\`\`\`mermaid
+graph LR
+A[先验] --> B[观测] --> C[后验]
+\`\`\`
+
+## 公式
+
+$$P(A|B) = \frac{P(B|A) \cdot P(A)}{P(B)}$$
+
+行内写法 \(P(A)\) 表示 A 的概率。
 ```

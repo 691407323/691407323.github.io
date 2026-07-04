@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="container">
+  <section>
+    <h2>文章归档</h2>
+    {% for year, year_posts in archive.items() %}
+    <h3 style="margin-top:24px;">{{ year }}（{{ year_posts|length }} 篇）</h3>
+    <ul class="posts">
+      {% for p in year_posts %}
+      <li><a href="/posts/{{ p.slug }}.html">{{ p.title }}</a> <small>{{ p.date }}</small></li>
+      {% endfor %}
+    </ul>
+    {% endfor %}
+  </section>
+</main>
+{% endblock %}

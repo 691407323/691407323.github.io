@@ -1,24 +1,83 @@
-/* Base styles */
-html { background: #f9f9f9; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; line-height:1.6; color:#222; background:#f9f9f9; margin: 0; }
-.container { max-width:800px; margin:0 auto; padding:24px; width: 100%; box-sizing: border-box; }
+/* ============================================================
+   CSS 变量体系（M-01 暗色模式）
+   所有颜色从此定义，新增模块统一引用变量
+   ============================================================ */
+:root {
+  --bg-primary: #f9f9f9;
+  --text-primary: #222;
+  --text-secondary: #666;
+  --border-color: #eee;
+  --code-bg: #222;
+  --code-text: #eee;
+  --toc-bg: #fff;
+  --toc-border: #e0e0e0;
+  --hover-bg: #f0f0f0;
+  --tag-bg: #f0f0f0;
+  --tag-color: #333;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1a2e;
+  --text-primary: #e0e0e0;
+  --text-secondary: #888;
+  --border-color: #333;
+  --code-bg: #16213e;
+  --code-text: #eee;
+  --toc-bg: #1a1a2e;
+  --toc-border: #333;
+  --hover-bg: #2a2a4a;
+  --tag-bg: #333;
+  --tag-color: #e0e0e0;
+}
+
+/* ============================================================
+   Base styles
+   ============================================================ */
+html { background: var(--bg-primary); }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  line-height: 1.6;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  margin: 0;
+  transition: background 0.3s, color 0.3s;
+}
+.container { max-width:800px; margin:0 auto; padding:24px; width:100%; box-sizing:border-box; }
 
 /* Post styles */
-.post-body img { max-width:100% }
-.posts { list-style:none; padding:0 }
-.posts li { padding:8px 0; border-bottom:1px solid #eee }
-.post-meta { color:#666; font-size:0.9rem }
-pre { background:#222; color:#eee; padding:12px; overflow-x: auto; max-width: 100%; box-sizing: border-box; }
+.post-body img { max-width:100%; }
+.posts { list-style:none; padding:0; }
+.posts li { padding:8px 0; border-bottom:1px solid var(--border-color); }
+.post-meta { color: var(--text-secondary); font-size:0.9rem; }
+pre { background:var(--code-bg); color:var(--code-text); padding:12px; overflow-x:auto; max-width:100%; box-sizing:border-box; }
 
-/* Footer */
-footer p { text-align: center; }
+/* Navigation & Footer (M-01) */
+.nav-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+.nav-link:hover {
+  color: var(--text-primary);
+  background: var(--hover-bg);
+  border-radius: 4px;
+}
+.nav-divider {
+  width: 1px; height: 16px;
+  background: var(--border-color);
+  margin: 0 2px; align-self: center;
+}
+.footer-text {
+  text-align: center;
+  color: var(--text-secondary);
+}
 
 /* TOC Layout - wrapper for sidebar + main */
 .toc-layout {
   display: flex;
 }
 
-/* TOC Sidebar - sticky left */
 .toc-sidebar {
   width: 220px;
   min-width: 220px;
@@ -26,8 +85,8 @@ footer p { text-align: center; }
   max-height: 100vh;
   padding: 24px 16px;
   overflow-y: auto;
-  border-right: 1px solid #e0e0e0;
-  background: #fff;
+  border-right: 1px solid var(--toc-border);
+  background: var(--toc-bg);
   position: sticky;
   top: 0;
   align-self: flex-start;
@@ -36,15 +95,21 @@ footer p { text-align: center; }
   font-weight: bold;
   margin-bottom: 12px;
   font-size: 0.95rem;
-  color: #333;
+  color: var(--text-primary);
   padding-bottom: 8px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
 }
 .toc-sidebar ul { list-style: none; padding-left: 0; margin: 0; }
 .toc-sidebar ul ul { padding-left: 16px; }
 .toc-sidebar li { margin: 6px 0; }
-.toc-sidebar a { text-decoration: none; color: #666; font-size: 0.85rem; line-height: 1.4; display: block; }
-.toc-sidebar a:hover { color: #222; }
+.toc-sidebar a {
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  display: block;
+}
+.toc-sidebar a:hover { color: var(--text-primary); }
 
 .toc-main { flex: 1; min-width: 0; padding: 24px; }
 
@@ -59,7 +124,75 @@ footer p { text-align: center; }
     height: auto;
     max-height: none;
     border-right: none;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--toc-border);
     padding: 16px;
   }
 }
+
+/* ============================================================
+   Header layout (M-01)
+   ============================================================ */
+.header-inner {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-left: 60px;
+  padding-right: 60px;
+}
+
+/* ============================================================
+   Code copy button (M-02)
+   ============================================================ */
+.code-copy-btn {
+  position: absolute;
+  top: 6px; right: 6px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--code-text);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.3;
+  transition: opacity 0.2s, background 0.2s;
+}
+.codehilite:hover .code-copy-btn { opacity: 1; }
+.code-copy-btn:hover { background: rgba(255, 255, 255, 0.25); }
+@media (hover: none) {
+  .code-copy-btn { opacity: 0.4; }
+  .codehilite:active .code-copy-btn { opacity: 1; }
+}
+
+/* ============================================================
+   Tag styles (M-04)
+   ============================================================ */
+.tag-cloud { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+.tag-item {
+  padding: 4px 12px;
+  border-radius: 4px;
+  background: var(--tag-bg); color: var(--tag-color);
+  text-decoration: none; font-size: 0.9rem;
+}
+.tag-item small { color: var(--text-secondary); }
+.post-tags {
+  margin-top: 16px; padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+.tag-inline {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--tag-bg); color: var(--tag-color);
+  text-decoration: none; font-size: 0.85rem;
+}
+
+/* ============================================================
+   Series navigation (M-10)
+   ============================================================ */
+.series-nav {
+  margin-top: 24px; padding: 16px;
+  border: 1px solid var(--border-color); border-radius: 8px;
+}
+.series-item { text-decoration: none; }

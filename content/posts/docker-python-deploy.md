@@ -2,6 +2,7 @@
 title: Docker 部署 Python 应用
 date: 2026-05-28
 slug: docker-python-deploy
+tags: [Docker, Python, 部署]
 ---
 
 本文演示如何使用 Docker 容器化部署一个 Python Web 应用，并展示多语言代码高亮效果。

@@ -2,6 +2,7 @@
 title: Markdown 语法指南
 date: 2026-05-29
 slug: markdown-guide
+tags: [Markdown, 写作]
 ---
 
 这是一篇全面展示 Markdown 语法的示例文章，帮助你快速上手写作。

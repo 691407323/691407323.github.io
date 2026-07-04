@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="container">
+  <section>
+    <h2>搜索文章</h2>
+    <div style="position:relative; margin-top:16px;">
+      <input id="search-input" type="search" placeholder="输入关键词搜索..."
+             style="width:100%; padding:12px; font-size:16px;
+                    border:1px solid var(--border-color);
+                    border-radius:4px; box-sizing:border-box;
+                    background:var(--bg-primary); color:var(--text-primary);">
+      <span id="search-status"
+            style="position:absolute; right:12px; top:14px;
+                   color:var(--text-secondary); font-size:0.85rem;"></span>
+    </div>
+    <div id="search-results" style="margin-top:16px;"></div>
+  </section>
+</main>
+{% endblock %}
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flexsearch@0.7.31/dist/flexsearch.bundle.min.js"></script>
+<script src="/static/js/search.js"></script>
+{% endblock %}

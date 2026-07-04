@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="container">
+  <section>
+    <h2>文章标签</h2>
+    <div class="tag-cloud">
+      {% for encoded, data in tag_index.items() %}
+      <a href="/tags/{{ data.url }}.html" class="tag-item">
+        {{ data.name }} <small>({{ data.posts|length }})</small>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  <section style="margin-top: 32px;">
+    <h3>全部文章（按标签分组）</h3>
+    {% for encoded, data in tag_index.items() %}
+    <details>
+      <summary style="cursor:pointer; padding:8px 0;">
+        <strong>{{ data.name }}</strong> · {{ data.posts|length }} 篇
+      </summary>
+      <ul class="posts">
+        {% for tp in data.posts %}
+        <li><a href="/posts/{{ tp.slug }}.html">{{ tp.title }}</a> <small>{{ tp.date }}</small></li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endfor %}
+  </section>
+</main>
+{% endblock %}

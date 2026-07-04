@@ -2,6 +2,7 @@
 title: TSTL 插件架构
 date: 2025-03-16
 slug: tstl-plugin-architecture
+tags: [TSTL, TypeScript, Lua, 架构]
 ---
 
 本文系统梳理一套基于 TypeScriptToLua (TSTL) 的自定义插件的完整实现，涵盖从增量编译到 AST 转换、代码生成的全流程。
