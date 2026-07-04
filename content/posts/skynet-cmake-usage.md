@@ -3,11 +3,14 @@ title: Skynet-cmake 跨平台使用
 date: 2026-06-03
 slug: skynet-cmake-usage
 tags: [Skynet, CMake, TSTL]
+description: 基于 hanxi/skynet-cmake 的跨平台构建方案，skynet 以 submodule 方式接入，并引入 TSTL 替代传统 Lua 脚本。
 ---
 
 ## 简介
 
-基于 [hanxi/skynet-cmake](https://github.com/hanxi/skynet-cmake) 项目，新增 skynet 框架的使用，并做了以下调整和 bug 修复。同时引入 TSTL（TypeScriptToLua）来替代传统 Lua 脚本编写方式。
+本篇基于 [hanxi/skynet-cmake](https://github.com/hanxi/skynet-cmake) 项目。skynet 以 submodule 的方式链接，方便升级且保持不可改原则。开发环境为 Visual Studio 2022，需安装 CMake 与 Clang 组件。在此基础上做了若干跨平台调整，同时引入 TSTL（TypeScriptToLua）来替代传统 Lua 脚本编写方式。
+
+项目地址：[skynet-cmake](https://github.com/691407323/skynet-cmake.git)
 
 ## 项目层级
 
@@ -30,18 +33,18 @@ buildWin/
 CMakeLists.txt
 </pre>
 
-## Skynet-cmake-win Bug 记录
+## Skynet-cmake-win 修改记录
 
-### 1. 修复 `unistd.h` 启动 log 调用
+### 1. 修改 `unistd.h` 启动 log 调用
 
 时间转换函数在 Windows 和 Linux 上表现不一致：
 
-- **Windows**: `_localtime64(struct tm, time_t)`
-- **Linux**: `localtime_r(time_t, struct tm)`
+- **Windows**：`_localtime64(struct tm, time_t)`
+- **Linux**：`localtime_r(time_t, struct tm)`
 
 调用方式需要区分平台，避免参数顺序导致的编译或运行时错误。
 
-### 2. 修复 Windows 下 socket 断开问题
+### 2. 修改 Windows 下 socket 断开问题
 
 Windows 下 `read` 函数在 socket 非阻塞模式下遇到 `WSAEWOULDBLOCK` 时会被当作异常断开。修复方案：
 
@@ -78,11 +81,16 @@ static DWORD WINAPI readInput(LPVOID lpParam) {
 
 #### Lua 接口
 
-| 函数 | 说明 |
-|------|------|
-| `initWinThread()` | 启动后台输入线程 |
-| `getWinThreadResultFlag()` | 获取用户输入字符串，无输入返回 nil |
-| `closeWinThread()` | 关闭线程并等待退出 |
+<table>
+<thead>
+<tr><th>函数</th><th>说明</th></tr>
+</thead>
+<tbody>
+<tr><td><code>initWinThread()</code></td><td>启动后台输入线程</td></tr>
+<tr><td><code>getWinThreadResultFlag()</code></td><td>获取用户输入字符串，无输入返回 <code>nil</code></td></tr>
+<tr><td><code>closeWinThread()</code></td><td>关闭线程并等待退出</td></tr>
+</tbody>
+</table>
 
 #### 完整源码
 
